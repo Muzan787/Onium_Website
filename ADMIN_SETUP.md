@@ -13,7 +13,7 @@ To access the admin dashboard, you need to create an admin user account using Su
    - Password: Choose a secure password
 4. Click **Create User**
 
-Project Name: Onium
+Project Name: Onium 
 Project Password: Onium@Website12
 
 ### Option 2: Using SQL
