@@ -253,10 +253,16 @@ export default function Reviews() {
               {reviews.length > 0 ? (
                 <div className="space-y-6">
                   {reviews.map(review => (
+                    
                     <div 
                       key={review.id} 
                       className="group bg-gradient-to-r from-white to-slate-50 rounded-xl border border-slate-200 p-6 hover:border-slate-300 hover:shadow-lg transition-all duration-300"
                     >
+                      {review.product_id && (
+                        <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full mb-2 inline-block">
+                          Product Review
+                        </span>
+                      )}
                       <div className="flex flex-col md:flex-row gap-6">
                         {/* Review Content */}
                         <div className="flex-1">

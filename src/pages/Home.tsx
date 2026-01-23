@@ -10,6 +10,23 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [categories, setCategories] = useState<string[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [stats, setStats] = useState({ average: 0, total: 0 });
+
+  const fetchGlobalStats = async () => {
+    const { data } = await supabase
+      .from('reviews')
+      .select('rating')
+      .eq('is_approved', true);
+
+    if (data && data.length > 0) {
+      const avg = data.reduce((acc, curr) => acc + curr.rating, 0) / data.length;
+      setStats({ average: parseFloat(avg.toFixed(1)), total: data.length });
+    }
+  };
+
+  useEffect(() => {
+    fetchGlobalStats();
+  }, []);
 
   useEffect(() => {
     fetchProducts();
@@ -95,14 +112,16 @@ export default function Home() {
               </div>
               
               {/* Customer Rating */}
-              <div className="mt-6 flex items-center gap-3">
-                <div className="flex items-center gap-1">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 text-yellow-300 fill-current" />
-                  ))}
-                </div>
-                <span className="text-sm text-blue-200">4.8/5 based on 1,200+ reviews</span>
+            <div className="mt-6 flex items-center gap-3">
+              <div className="flex items-center gap-1">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} className={`w-4 h-4 ${i < Math.round(stats.average) ? 'text-yellow-300 fill-current' : 'text-blue-200'}`} />
+                ))}
               </div>
+              <span className="text-sm text-blue-200">
+                {stats.average > 0 ? `${stats.average}/5 based on ${stats.total} real reviews` : 'No reviews yet'}
+              </span>
+            </div>
             </div>
             <div className="hidden lg:block flex-1 relative">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-pulse" />
@@ -119,7 +138,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Deals Slider */}
+      {/* Deals Slider
       <div className="container mx-auto px-4 -mt-2 md:-mt-5 relative z-10">
         <div className="relative">
           <DealSlider />
@@ -128,7 +147,7 @@ export default function Home() {
             <span className="text-sm font-bold">HOT DEALS</span>
           </div>
         </div>
-      </div>
+      </div> */}
 
       <div className="container mx-auto px-4 py-12">
         {/* Products Header */}
@@ -280,7 +299,7 @@ export default function Home() {
               </div>
               <h4 className="font-bold text-blue-900 text-lg mb-2">Fast Delivery</h4>
               <p className="text-slate-600 text-sm">
-                Free same-day delivery on orders above ₹500. Quick and reliable service.
+                Free same-day delivery on orders above Rs2,000. Quick and reliable service.
               </p>
             </div>
           </div>

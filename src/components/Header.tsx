@@ -24,7 +24,7 @@ export default function Header() {
         <div className="container mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 animate-pulse" />
-            <span>✨ Free Delivery on Orders Above ₹500</span>
+            <span>✨ Free Delivery on Orders Above Rs2,000</span>
           </div>
           <a 
             href="https://wa.me/923231550147" 
@@ -94,7 +94,7 @@ export default function Header() {
                 <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-500 group-hover:w-full transition-all duration-300"></span>
               </Link>
               <Link 
-                to="/products" 
+                to="/" 
                 className="text-gray-700 hover:text-blue-600 font-medium transition-colors relative group"
               >
                 Products
@@ -221,7 +221,7 @@ export default function Header() {
                 Home
               </Link>
               <Link 
-                to="/products" 
+                to="/" 
                 className="py-2.5 px-4 bg-blue-50 rounded-lg text-blue-700 font-medium hover:bg-blue-100 transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, ShoppingCart, Minus, Plus, Shield, Truck, RefreshCw, Star, Package, Droplets, Leaf, Check, Share2, Heart } from 'lucide-react';
-import { supabase, Product } from '../lib/supabase';
+import { supabase, Product, Review } from '../lib/supabase';
 import { useCart } from '../context/CartContext';
 import ProductCard from '../components/ProductCard';
 
@@ -15,12 +15,23 @@ export default function ProductDetail() {
   const [selectedImage, setSelectedImage] = useState(0);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [productReviews, setProductReviews] = useState<Review[]>([]);
+  const [reviewForm, setReviewForm] = useState({ name: '', rating: 5, comment: '' });
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [reviewMessage, setReviewMessage] = useState('');
+  const [reviewFile, setReviewFile] = useState<File | null>(null);
+  const reviewsCount = productReviews.length;
+  const averageRating = reviewsCount > 0 
+    ? (productReviews.reduce((acc, rev) => acc + rev.rating, 0) / reviewsCount).toFixed(1)
+    : 0;
 
   useEffect(() => {
     if (id) {
       fetchProduct();
+      fetchProductReviews(); // Add this call
     }
   }, [id]);
+
 
   const fetchProduct = async () => {
     try {
@@ -50,6 +61,16 @@ export default function ProductDetail() {
     }
   };
 
+  const fetchProductReviews = async () => {
+    const { data } = await supabase
+      .from('reviews')
+      .select('*')
+      .eq('product_id', id)
+      .eq('is_approved', true)
+      .order('created_at', { ascending: false });
+    setProductReviews(data || []);
+  };
+
   const handleAddToCart = () => {
     if (product) {
       setIsAdding(true);
@@ -59,6 +80,49 @@ export default function ProductDetail() {
       setTimeout(() => setIsAdding(false), 1000);
     }
   };
+
+  const handleReviewSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIsSubmittingReview(true);
+
+  let uploadedImageUrl = "";
+
+  // Optional: Cloudinary upload logic if a file is selected
+  if (reviewFile) {
+    const formData = new FormData();
+    formData.append('file', reviewFile);
+    formData.append('upload_preset', 'OniumReviews'); 
+    try {
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/dztldh7o2/image/upload`,
+        { method: 'POST', body: formData }
+      );
+      const data = await response.json();
+      uploadedImageUrl = data.secure_url;
+    } catch (error) {
+      console.error("Cloudinary upload failed:", error);
+    }
+  }
+
+  // Insert review with the product_id link
+  const { error } = await supabase.from('reviews').insert([{
+    customer_name: reviewForm.name,
+    rating: reviewForm.rating,
+    comment: reviewForm.comment,
+    image_url: uploadedImageUrl || null,
+    product_id: id // Links the review to this specific product
+  }]);
+
+  if (!error) {
+    setReviewMessage('🎉 Review submitted! It will appear once approved.');
+    setReviewForm({ name: '', rating: 5, comment: '' });
+    setReviewFile(null);
+    setTimeout(() => setReviewMessage(''), 5000);
+  } else {
+    alert("Failed to submit review.");
+  }
+  setIsSubmittingReview(false);
+};
 
   const productImages = product?.image_url 
     ? [product.image_url, ...(product.additional_images || [])]
@@ -199,15 +263,18 @@ export default function ProductDetail() {
               <span className="inline-block bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-semibold capitalize">
                 {product.category}
               </span>
-              <div className="flex items-center gap-1">
-                {[...Array(5)].map((_, i) => (
-                  <Star 
-                    key={i} 
-                    className="w-4 h-4 text-yellow-400" 
-                    fill="currentColor"
-                  />
-                ))}
-                <span className="text-sm text-gray-600 ml-1">(4.8)</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1">
+                  {[...Array(5)].map((_, i) => (
+                    <Star 
+                      key={i} 
+                      className={`w-4 h-4 ${i < Math.round(Number(averageRating)) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} 
+                    />
+                  ))}
+                  <span className="text-sm text-gray-600 ml-1">
+                    ({reviewsCount > 0 ? averageRating : 'No reviews'})
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -375,6 +442,104 @@ export default function ProductDetail() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Product Specific Reviews */}
+        <div className="mt-16 bg-white rounded-2xl border border-blue-100 p-8 shadow-sm">
+          <h2 className="text-2xl font-bold text-gray-900 mb-8">Product Reviews</h2>
+          
+          <div className="grid lg:grid-cols-2 gap-12">
+            {/* Display Reviews */}
+            <div className="space-y-6">
+              {productReviews.length > 0 ? (
+                productReviews.map((rev) => (
+                  <div key={rev.id} className="border-b border-gray-100 pb-6">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="flex text-yellow-400">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} size={16} fill={i < rev.rating ? "currentColor" : "none"} />
+                        ))}
+                      </div>
+                      <span className="font-bold text-gray-900">{rev.customer_name}</span>
+                    </div>
+                    <p className="text-gray-600 italic">"{rev.comment}"</p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-500">No reviews for this product yet.</p>
+              )}
+            </div>
+            
+            {/* Quick Review Form */}
+            <div className="bg-blue-50/50 p-6 rounded-xl border border-blue-100">
+              <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <Star className="w-5 h-5 text-yellow-500" />
+                Write a Review
+              </h3>
+              
+              {reviewMessage && (
+                <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg text-sm font-medium">
+                  {reviewMessage}
+                </div>
+              )}
+
+              <form onSubmit={handleReviewSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Your Name</label>
+                  <input
+                    type="text"
+                    required
+                    className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    value={reviewForm.name}
+                    onChange={e => setReviewForm({...reviewForm, name: e.target.value})}
+                    placeholder="e.g. Ali Khan"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Rating</label>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((num) => (
+                      <button
+                        key={num}
+                        type="button"
+                        onClick={() => setReviewForm({...reviewForm, rating: num})}
+                        className="hover:scale-110 transition-transform"
+                      >
+                        <Star 
+                          size={24} 
+                          fill={num <= reviewForm.rating ? "#fbbf24" : "none"} 
+                          className={num <= reviewForm.rating ? "text-yellow-400" : "text-gray-300"} 
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Your Comments</label>
+                  <textarea
+                    required
+                    className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all h-24 resize-none"
+                    value={reviewForm.comment}
+                    onChange={e => setReviewForm({...reviewForm, comment: e.target.value})}
+                    placeholder="What did you think of this product?"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmittingReview}
+                  className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isSubmittingReview ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : 'Post Review'}
+                </button>
+              </form>
+            </div>
+
           </div>
         </div>
 

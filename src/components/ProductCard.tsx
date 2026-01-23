@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
 import { ShoppingCart, Star, Leaf, Shield, Truck } from 'lucide-react';
-import { Product } from '../lib/supabase';
+import { Product, supabase } from '../lib/supabase';
 import { useCart } from '../context/CartContext';
+import { useEffect, useState } from 'react';
 
 interface ProductCardProps {
   product: Product;
@@ -9,6 +10,23 @@ interface ProductCardProps {
 
 export default function ProductCard({ product }: ProductCardProps) {
   const { addToCart } = useCart();
+  const [avgRating, setAvgRating] = useState<number | null>(null);
+
+  useEffect(() => {
+    const fetchRating = async () => {
+      const { data } = await supabase
+        .from('reviews')
+        .select('rating')
+        .eq('product_id', product.id)
+        .eq('is_approved', true);
+      
+      if (data && data.length > 0) {
+        const avg = data.reduce((acc, curr) => acc + curr.rating, 0) / data.length;
+        setAvgRating(parseFloat(avg.toFixed(1)));
+      }
+    };
+    fetchRating();
+  }, [product.id]);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -82,7 +100,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           {/* Rating Stars */}
           <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full flex items-center gap-1 shadow-sm">
             <Star className="w-3 h-3 text-yellow-400 fill-current" />
-            <span className="text-xs font-bold text-gray-700">4.8</span>
+            <span className="text-xs font-bold text-gray-700">{avgRating || 'New'}</span>
           </div>
         </div>
 

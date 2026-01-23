@@ -61,6 +61,7 @@ export interface Review {
   rating: number;
   comment: string;
   is_approved: boolean;
-  image_url?: string; // Add this line
+  image_url?: string;
+  product_id?: string; // Add this line
   created_at: string;
 }
