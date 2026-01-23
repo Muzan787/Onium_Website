@@ -12,6 +12,9 @@ import AdminLogin from './pages/admin/AdminLogin';
 import AdminProducts from './pages/admin/AdminProducts';
 import AdminDeals from './pages/admin/AdminDeals';
 import AdminOrders from './pages/admin/AdminOrders';
+import AdminReviews from './pages/admin/AdminReviews';
+import Reviews from './pages/Reviews';
+import About from './pages/About';
 
 function App() {
   return (
@@ -29,6 +32,8 @@ function App() {
                     <Route path="/product/:id" element={<ProductDetail />} />
                     <Route path="/cart" element={<Cart />} />
                     <Route path="/checkout" element={<Checkout />} />
+                    <Route path="/reviews" element={<Reviews />} />
+                    <Route path="/about" element={<About />} />
                   </Routes>
                 </>
               }
@@ -48,6 +53,7 @@ function App() {
               <Route path="deals" element={<AdminDeals />} />
               <Route path="orders" element={<AdminOrders />} />
               <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
+              <Route path="reviews" element={<AdminReviews />} />
             </Route>
           </Routes>
         </CartProvider>

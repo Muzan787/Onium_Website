@@ -51,3 +51,13 @@ export interface OrderItem {
   price_at_purchase: number;
   created_at: string;
 }
+
+export interface Review {
+  id: string;
+  customer_name: string;
+  rating: number;
+  comment: string;
+  is_approved: boolean;
+  image_url?: string; // Add this line
+  created_at: string;
+}

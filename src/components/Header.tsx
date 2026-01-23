@@ -88,22 +88,16 @@ export default function Header() {
             </div>
           </form>
 
-          {/* 5. Navigation Bar (As shown in your image) */}
-          <nav className="flex items-center justify-center gap-4 md:gap-8 overflow-x-auto no-scrollbar py-1 border-t border-slate-800/50 pt-3">
-            <Link to="/products" className="whitespace-nowrap text-xs md:text-sm font-medium text-gray-400 hover:text-white transition-colors">
-              All Products
+          {/* 5. Navigation Bar */}
+          <nav className="flex items-center justify-center gap-8 overflow-x-auto no-scrollbar py-1 border-t border-slate-800/50 pt-3">
+            <Link to="/" className="whitespace-nowrap text-sm font-medium text-gray-400 hover:text-white transition-colors">
+              Our Products
             </Link>
-            <Link to="/products?category=networking" className="whitespace-nowrap text-xs md:text-sm font-medium text-gray-400 hover:text-white transition-colors">
-              Networking
+            <Link to="/reviews" className="whitespace-nowrap text-sm font-medium text-gray-400 hover:text-white transition-colors">
+              Reviews
             </Link>
-            <Link to="/products?category=servers" className="whitespace-nowrap text-xs md:text-sm font-medium text-gray-400 hover:text-white transition-colors">
-              Servers
-            </Link>
-            <Link to="/products?category=security" className="whitespace-nowrap text-xs md:text-sm font-medium text-gray-400 hover:text-white transition-colors">
-              Security
-            </Link>
-            <Link to="/support" className="whitespace-nowrap text-xs md:text-sm font-medium text-gray-400 hover:text-white transition-colors">
-              Support
+            <Link to="/about" className="whitespace-nowrap text-sm font-medium text-gray-400 hover:text-white transition-colors">
+              About
             </Link>
           </nav>
 

@@ -1,5 +1,5 @@
 import { Link, useNavigate, Outlet, useLocation } from 'react-router-dom';
-import { Package, Image, ShoppingBag, LogOut } from 'lucide-react';
+import { Package, Image, ShoppingBag, LogOut, Star } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function AdminLayout() {
@@ -70,6 +70,17 @@ export default function AdminLayout() {
               <ShoppingBag className="w-5 h-5" />
               Orders
             </Link>
+
+            <Link
+              to="/admin/reviews"
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition ${
+                isActive('/admin/reviews') ? 'bg-slate-900 text-white' : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <Star className="w-5 h-5" />
+              Reviews
+            </Link>
+
           </nav>
         </aside>
 
