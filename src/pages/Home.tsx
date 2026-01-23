@@ -45,25 +45,28 @@ export default function Home() {
         <DealSlider />
 
         <div className="mt-12">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-3xl font-bold text-gray-900">Our Products</h2>
+          <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 text-center md:text-left">
+            Our Products
+          </h2>
 
-            <div className="flex gap-2">
-              {categories.map((category) => (
-                <button
-                  key={category}
-                  onClick={() => setSelectedCategory(category)}
-                  className={`px-4 py-2 rounded-lg capitalize transition ${
-                    selectedCategory === category
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-white text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  {category}
-                </button>
-              ))}
-            </div>
+          {/* Scrollable categories container for mobile */}
+          <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar -mx-4 px-4 md:mx-0 md:px-0">
+            {categories.map((category) => (
+              <button
+                key={category}
+                onClick={() => setSelectedCategory(category)}
+                className={`px-4 py-2 rounded-lg capitalize transition whitespace-nowrap text-sm md:text-base border ${
+                  selectedCategory === category
+                    ? 'bg-slate-900 text-white border-slate-900'
+                    : 'bg-white text-gray-700 hover:bg-gray-100 border-gray-200'
+                }`}
+              >
+                {category}
+              </button>
+            ))}
           </div>
+        </div>
 
           {isLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

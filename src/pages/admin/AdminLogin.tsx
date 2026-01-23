@@ -83,12 +83,6 @@ export default function AdminLogin() {
           </button>
         </form>
 
-        <div className="mt-6 text-center text-sm text-gray-500">
-          <p>Demo credentials:</p>
-          <p className="font-mono text-xs mt-1">
-            Create an admin user with Supabase Auth
-          </p>
-        </div>
       </div>
     </div>
   );

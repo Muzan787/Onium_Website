@@ -47,7 +47,8 @@ export default function DealSlider() {
 
   if (isLoading) {
     return (
-      <div className="w-full h-96 bg-gray-200 animate-pulse rounded-lg" />
+      /* Constrained width on desktop for the loader */
+      <div className="w-full max-w-4xl mx-auto aspect-[16/9] bg-gray-200 animate-pulse rounded-lg" />
     );
   }
 
@@ -56,19 +57,22 @@ export default function DealSlider() {
   }
 
   return (
-    <div className="relative w-full h-96 md:h-[500px] overflow-hidden rounded-lg group">
+    /* 1. mx-auto: Centers the slider.
+       2. max-w-4xl: Limits the size on desktop (you can adjust this to 3xl or 5xl).
+       3. aspect-[16/9]: Keeps the mobile ratio consistent.
+    */
+    <div className="relative w-full max-w-4xl mx-auto aspect-[16/9] overflow-hidden rounded-lg group bg-gray-100 shadow-lg">
       <div
         className="flex transition-transform duration-500 ease-out h-full"
         style={{ transform: `translateX(-${currentIndex * 100}%)` }}
       >
         {deals.map((deal) => (
-          <div key={deal.id} className="min-w-full h-full relative">
+          <div key={deal.id} className="min-w-full h-full relative flex items-center justify-center bg-slate-50">
             <img
               src={deal.image_url}
               alt="Deal"
-              className="w-full h-full object-cover"
+              className="max-w-full max-h-full object-contain"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
           </div>
         ))}
       </div>
@@ -94,9 +98,9 @@ export default function DealSlider() {
               <button
                 key={index}
                 onClick={() => setCurrentIndex(index)}
-                className={`w-2 h-2 rounded-full transition-all ${
+                className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full transition-all ${
                   index === currentIndex
-                    ? 'bg-white w-8'
+                    ? 'bg-white w-6 md:w-8'
                     : 'bg-white/50 hover:bg-white/75'
                 }`}
               />
