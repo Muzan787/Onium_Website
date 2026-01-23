@@ -134,7 +134,7 @@ export default function AdminOrders() {
                   items
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                  ${order.total_price.toFixed(2)}
+                  Rs{order.total_price.toFixed(2)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <select

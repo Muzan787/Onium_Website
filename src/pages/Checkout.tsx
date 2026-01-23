@@ -190,7 +190,7 @@ export default function Checkout() {
                       {item.title} x {item.quantity}
                     </span>
                     <span className="text-gray-900 font-medium">
-                      ${(item.price * item.quantity).toFixed(2)}
+                      Rs{(item.price * item.quantity).toFixed(2)}
                     </span>
                   </div>
                 ))}
@@ -199,7 +199,7 @@ export default function Checkout() {
               <div className="border-t pt-4 space-y-2">
                 <div className="flex justify-between text-gray-600">
                   <span>Subtotal</span>
-                  <span>${getTotalPrice().toFixed(2)}</span>
+                  <span>Rs{getTotalPrice().toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-gray-600">
                   <span>Shipping</span>
@@ -207,7 +207,7 @@ export default function Checkout() {
                 </div>
                 <div className="flex justify-between text-lg font-bold text-gray-900">
                   <span>Total</span>
-                  <span>${getTotalPrice().toFixed(2)}</span>
+                  <span>Rs{getTotalPrice().toFixed(2)}</span>
                 </div>
               </div>
             </div>

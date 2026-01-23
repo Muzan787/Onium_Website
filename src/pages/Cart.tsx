@@ -53,7 +53,7 @@ export default function Cart() {
                   </Link>
                   <p className="text-sm text-gray-500 mt-1">{item.category}</p>
                   <p className="text-lg font-bold text-gray-900 mt-2">
-                    ${item.price.toFixed(2)}
+                    Rs{item.price.toFixed(2)}
                   </p>
                 </div>
 
@@ -82,7 +82,7 @@ export default function Cart() {
                   </div>
 
                   <p className="font-bold text-gray-900">
-                    ${(item.price * item.quantity).toFixed(2)}
+                    Rs{(item.price * item.quantity).toFixed(2)}
                   </p>
                 </div>
               </div>
@@ -98,7 +98,7 @@ export default function Cart() {
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between text-gray-600">
                   <span>Subtotal</span>
-                  <span>${getTotalPrice().toFixed(2)}</span>
+                  <span>Rs{getTotalPrice().toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-gray-600">
                   <span>Shipping</span>
@@ -106,7 +106,7 @@ export default function Cart() {
                 </div>
                 <div className="border-t pt-3 flex justify-between text-lg font-bold text-gray-900">
                   <span>Total</span>
-                  <span>${getTotalPrice().toFixed(2)}</span>
+                  <span>Rs{getTotalPrice().toFixed(2)}</span>
                 </div>
               </div>
 
