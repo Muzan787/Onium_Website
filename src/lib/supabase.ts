@@ -34,12 +34,17 @@ export interface Deal {
   created_at: string;
 }
 
+// Updated Order Interface
 export interface Order {
   id: string;
   customer_name: string;
   customer_email: string;
   customer_phone: string;
   customer_address: string;
+  special_instructions?: string;
+  payment_method: string;
+  subtotal_price: number;
+  shipping_charge: number;
   total_price: number;
   status: string;
   created_at: string;
@@ -62,6 +67,6 @@ export interface Review {
   comment: string;
   is_approved: boolean;
   image_url?: string;
-  product_id?: string; // Add this line
+  product_id?: string;
   created_at: string;
 }

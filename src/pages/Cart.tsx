@@ -10,6 +10,11 @@ export default function Cart() {
   const freeShipping = getTotalPrice() >= shippingThreshold;
   const remainingForFreeShipping = shippingThreshold - getTotalPrice();
 
+  // Generate the WhatsApp message with item titles
+  const whatsappMessage = encodeURIComponent(
+    `I want to purchase following items:\n${cartItems.map(item => `• ${item.title}`).join('\n')}`
+  );
+
   if (cartItems.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center p-4">
@@ -274,7 +279,7 @@ export default function Cart() {
 
                 {/* WhatsApp Checkout Option */}
                 <a
-                  href={`https://wa.me/923231550147?text=I%20want%20to%20checkout%20my%20cart%20with%20total%20Rs${(freeShipping ? getTotalPrice() : getTotalPrice() + 100).toFixed(2)}`}
+                  href={`https://wa.me/923231550147?text=${whatsappMessage}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full mt-4 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl hover:shadow-xl transition-all font-bold flex items-center justify-center gap-2"
