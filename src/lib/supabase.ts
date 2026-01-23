@@ -10,6 +10,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export interface Product {
+  additional_images: never[];
+  unit: string;
   id: string;
   title: string;
   description: string;
