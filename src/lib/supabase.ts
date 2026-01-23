@@ -23,6 +23,7 @@ export interface Product {
 }
 
 export interface Deal {
+  expires_at: any;
   id: string;
   image_url: string;
   link_url: string;
