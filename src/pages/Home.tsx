@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Sparkles, Filter, Shield, Truck, Leaf, Droplets, RefreshCw, MessageCircle, Star } from 'lucide-react';
+import { Sparkles, Filter, Shield, Truck, Leaf, Droplets, RefreshCw, MessageCircle, Star, Headphones, Watch, Camera, Monitor, Zap, LayoutGrid, Package } from 'lucide-react';
 import { supabase, Product } from '../lib/supabase';
 import DealSlider from '../components/DealSlider';
 import ProductCard from '../components/ProductCard';
@@ -63,6 +63,7 @@ export default function Home() {
     selectedCategory === 'all'
       ? products
       : products.filter((p) => p.category === selectedCategory);
+
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
@@ -137,8 +138,7 @@ export default function Home() {
           </div>
         </div>
       </div>
-
-      {/* Deals Slider
+            {/* Deals Slider
       <div className="container mx-auto px-4 -mt-2 md:-mt-5 relative z-10">
         <div className="relative">
           <DealSlider />
@@ -216,26 +216,24 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Products Grid */}
+        {/* Products Grid - IMPROVED: 2 cols on mobile, smaller gap */}
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6">
             {[...Array(8)].map((_, i) => (
               <div
                 key={i}
                 className="group bg-white rounded-2xl shadow-lg border border-blue-200 overflow-hidden animate-pulse"
               >
                 <div className="aspect-square bg-gradient-to-br from-blue-100 to-cyan-100" />
-                <div className="p-6 space-y-4">
+                <div className="p-4 space-y-3">
+                  <div className="h-4 bg-blue-200 rounded w-2/3" />
                   <div className="h-4 bg-blue-200 rounded w-1/3" />
-                  <div className="h-5 bg-blue-200 rounded w-2/3" />
-                  <div className="h-8 bg-blue-200 rounded w-1/2" />
-                  <div className="h-10 bg-blue-200 rounded-xl w-full" />
                 </div>
               </div>
             ))}
           </div>
         ) : filteredProducts.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6">
             {filteredProducts.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
@@ -261,7 +259,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* Benefits Section */}
+        {/* Benefits Section... (rest is same) */}
         <div className="mt-16 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-8 border border-blue-200 shadow-sm">
           <div className="text-center mb-10">
             <h3 className="text-2xl md:text-3xl font-bold text-blue-900 mb-4">

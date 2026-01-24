@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase, Deal } from '../lib/supabase';
 
@@ -6,19 +6,36 @@ export default function DealSlider() {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // NEW: Touch handling state
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     fetchDeals();
   }, []);
 
+  // Reset timer on slide change to prevent auto-slide right after user interaction
   useEffect(() => {
+    startAutoSlide();
+    return () => stopAutoSlide();
+  }, [currentIndex, deals.length]);
+
+  const startAutoSlide = () => {
+    stopAutoSlide();
     if (deals.length > 1) {
-      const interval = setInterval(() => {
+      timerRef.current = setInterval(() => {
         setCurrentIndex((prev) => (prev + 1) % deals.length);
       }, 5000);
-      return () => clearInterval(interval);
     }
-  }, [deals.length]);
+  };
+
+  const stopAutoSlide = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+  };
 
   const fetchDeals = async () => {
     try {
@@ -45,9 +62,34 @@ export default function DealSlider() {
     setCurrentIndex((prev) => (prev + 1) % deals.length);
   };
 
+  // Touch Event Handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    stopAutoSlide();
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+
+    if (isLeftSwipe) {
+      goToNext();
+    } else if (isRightSwipe) {
+      goToPrevious();
+    }
+    // Resume auto-slide handled by useEffect
+  };
+
   if (isLoading) {
     return (
-      /* Constrained width on desktop for the loader */
       <div className="w-full max-w-4xl mx-auto aspect-[16/9] bg-gray-200 animate-pulse rounded-lg" />
     );
   }
@@ -57,11 +99,12 @@ export default function DealSlider() {
   }
 
   return (
-    /* 1. mx-auto: Centers the slider.
-       2. max-w-4xl: Limits the size on desktop (you can adjust this to 3xl or 5xl).
-       3. aspect-[16/9]: Keeps the mobile ratio consistent.
-    */
-    <div className="relative w-full max-w-4xl mx-auto aspect-[16/9] overflow-hidden rounded-lg group bg-gray-100 shadow-lg">
+    <div 
+      className="relative w-full max-w-4xl mx-auto aspect-[16/9] overflow-hidden rounded-lg group bg-gray-100 shadow-lg touch-pan-y"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       <div
         className="flex transition-transform duration-500 ease-out h-full"
         style={{ transform: `translateX(-${currentIndex * 100}%)` }}
@@ -71,7 +114,7 @@ export default function DealSlider() {
             <img
               src={deal.image_url}
               alt="Deal"
-              className="max-w-full max-h-full object-contain"
+              className="max-w-full max-h-full object-contain pointer-events-none select-none" // Prevent image drag behavior
             />
           </div>
         ))}
@@ -79,20 +122,22 @@ export default function DealSlider() {
 
       {deals.length > 1 && (
         <>
+          {/* Desktop Navigation Buttons (Hidden on mobile) */}
           <button
             onClick={goToPrevious}
-            className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-900 p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+            className="hidden md:block absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-900 p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
           >
             <ChevronLeft className="w-6 h-6" />
           </button>
 
           <button
             onClick={goToNext}
-            className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-900 p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+            className="hidden md:block absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-900 p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
           >
             <ChevronRight className="w-6 h-6" />
           </button>
 
+          {/* Dots Indicator */}
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
             {deals.map((_, index) => (
               <button

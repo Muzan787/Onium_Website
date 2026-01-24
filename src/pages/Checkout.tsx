@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { supabase } from '../lib/supabase';
-import { CheckCircle, Truck, Shield, CreditCard, Package, Home, Phone, Mail, User, MapPin, MessageCircle, Lock, ArrowLeft, AlertCircle } from 'lucide-react';
+import { CheckCircle, Truck, Shield, CreditCard, Package, Home, User, MapPin, MessageCircle, Lock, ArrowLeft, ChevronRight, ChevronLeft } from 'lucide-react';
 
 export default function Checkout() {
   const { cartItems, getTotalPrice, clearCart } = useCart();
@@ -11,6 +11,9 @@ export default function Checkout() {
   const [orderComplete, setOrderComplete] = useState(false);
   const [orderId, setOrderId] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cod');
+  
+  // NEW: Wizard State
+  const [currentStep, setCurrentStep] = useState(1);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -28,10 +31,37 @@ export default function Checkout() {
   const isFreeShipping = subtotal >= SHIPPING_THRESHOLD;
   const shippingCharge = isFreeShipping ? 0 : SHIPPING_CHARGE;
   const total = subtotal + shippingCharge;
-  const remainingForFreeShipping = SHIPPING_THRESHOLD - subtotal;
+
+  // Validation for steps
+  const validateStep = (step: number) => {
+    switch (step) {
+      case 1: // Contact
+        return formData.name && formData.phone && formData.email;
+      case 2: // Shipping
+        return formData.city && formData.address;
+      default:
+        return true;
+    }
+  };
+
+  const handleNext = () => {
+    if (validateStep(currentStep)) {
+      setCurrentStep(curr => curr + 1);
+      window.scrollTo(0, 0);
+    } else {
+      alert('Please fill in all required fields to proceed.');
+    }
+  };
+
+  const handleBack = () => {
+    setCurrentStep(curr => curr - 1);
+    window.scrollTo(0, 0);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateStep(1) || !validateStep(2)) return;
+    
     setIsProcessing(true);
 
     try {
@@ -133,26 +163,6 @@ export default function Checkout() {
               </div>
             </div>
 
-            <div className="mb-8">
-              <h4 className="font-bold text-gray-900 mb-3">What's Next?</h4>
-              <div className="flex items-center justify-between text-sm">
-                <div className="text-center">
-                  <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-2 font-bold">1</div>
-                  <div>Order Processing</div>
-                </div>
-                <div className="h-0.5 w-8 bg-blue-200"></div>
-                <div className="text-center">
-                  <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-2 font-bold">2</div>
-                  <div>Quality Check</div>
-                </div>
-                <div className="h-0.5 w-8 bg-blue-200"></div>
-                <div className="text-center">
-                  <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-2 font-bold">3</div>
-                  <div>Out for Delivery</div>
-                </div>
-              </div>
-            </div>
-
             <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={() => navigate('/')}
@@ -177,386 +187,230 @@ export default function Checkout() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-      {/* WhatsApp Button */}
-      <a
-        href={`https://wa.me/923231550147?text=Need%20help%20with%20checkout...`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="fixed bottom-6 right-6 z-40 bg-gradient-to-r from-green-500 to-green-600 text-white p-3 rounded-full shadow-2xl hover:shadow-3xl hover:scale-110 transition-all duration-300"
-      >
-        <MessageCircle className="w-6 h-6" fill="white" />
-      </a>
-
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-blue-900 mb-2">
-              Complete Your Order
-            </h1>
-            <p className="text-gray-600 flex items-center gap-2">
-              <Package className="w-4 h-4" />
-              Almost there! Just a few details to get your cleaning products delivered
-            </p>
+    <div className="min-h-screen bg-gray-50 pb-28 md:pb-12">
+      {/* Mobile Sticky Header with Progress */}
+      <div className="sticky top-0 z-30 bg-white shadow-sm border-b border-gray-100">
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button onClick={() => navigate('/cart')} className="text-gray-500 hover:text-blue-600 p-1">
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <h1 className="text-lg font-bold text-gray-900">Checkout</h1>
           </div>
-          <button
-            onClick={() => navigate('/cart')}
-            className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            Back to Cart
-          </button>
+          <div className="text-sm font-medium text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+            Step {currentStep} of 3
+          </div>
         </div>
+        {/* Progress Bar */}
+        <div className="w-full h-1 bg-gray-100">
+          <div 
+            className="h-full bg-blue-600 transition-all duration-300 ease-out"
+            style={{ width: `${(currentStep / 3) * 100}%` }}
+          />
+        </div>
+      </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Left Column: Form */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Shipping Progress Bar */}
-            {!isFreeShipping && subtotal > 0 && (
-              <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-5 border border-blue-200 shadow-sm">
-                <div className="flex items-center gap-3 mb-3">
-                  {remainingForFreeShipping > 0 ? (
-                    <AlertCircle className="w-6 h-6 text-orange-500" />
-                  ) : (
-                    <Truck className="w-6 h-6 text-blue-600" />
-                  )}
-                  <div className="flex-1">
-                    <div className="flex justify-between text-sm font-semibold text-blue-900 mb-1">
-                      {remainingForFreeShipping > 0 ? (
-                        <>
-                          <span>Add Rs{remainingForFreeShipping.toFixed(2)} more for FREE delivery!</span>
-                          <span>Rs{subtotal.toFixed(2)} / Rs{SHIPPING_THRESHOLD}</span>
-                        </>
-                      ) : (
-                        <span className="text-green-600">🎉 Congratulations! You've unlocked FREE delivery!</span>
-                      )}
-                    </div>
-                    {remainingForFreeShipping > 0 && (
-                      <div className="w-full bg-blue-200 rounded-full h-2.5">
-                        <div 
-                          className="bg-gradient-to-r from-blue-500 to-cyan-500 h-2.5 rounded-full transition-all duration-500"
-                          style={{ width: `${Math.min((subtotal / SHIPPING_THRESHOLD) * 100, 100)}%` }}
-                        ></div>
-                      </div>
-                    )}
-                  </div>
+      <div className="container mx-auto px-4 py-6 max-w-lg">
+        <form id="checkout-form" onSubmit={handleSubmit} className="space-y-6">
+          
+          {/* STEP 1: Contact Information */}
+          {currentStep === 1 && (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 animate-fade-in">
+              <h2 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <User className="w-5 h-5 text-blue-600" />
+                Contact Details
+              </h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                  {/* Added text-base to prevent iOS zoom */}
+                  <input
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Enter your name"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-base transition-all"
+                  />
                 </div>
-                <div className="text-sm text-gray-600 mt-2">
-                  {remainingForFreeShipping > 0 ? (
-                    <>Currently: <span className="font-semibold text-red-600">Rs{SHIPPING_CHARGE} delivery charge applied</span></>
-                  ) : (
-                    <>Delivery: <span className="font-semibold text-green-600">FREE Same-day delivery</span></>
-                  )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                  <input
+                    type="tel"
+                    required
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="+92 300 1234567"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-base transition-all"
+                  />
                 </div>
-              </div>
-            )}
-
-            {/* Contact Information */}
-            <div className="bg-white rounded-2xl shadow-xl border border-blue-100 p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <User className="w-6 h-6 text-blue-600" />
-                </div>
-                <h2 className="text-2xl font-bold text-blue-900">
-                  Contact Information
-                </h2>
-              </div>
-
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <label className="block text-sm font-semibold text-gray-700 flex items-center gap-2">
-                      <User className="w-4 h-4" />
-                      Full Name
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.name}
-                      onChange={(e) =>
-                        setFormData({ ...formData, name: e.target.value })
-                      }
-                      placeholder="Enter your full name"
-                      className="w-full px-4 py-3 bg-blue-50 border border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800 transition-all"
-                    />
-                  </div>
-
-                  <div className="space-y-3">
-                    <label className="block text-sm font-semibold text-gray-700 flex items-center gap-2">
-                      <Phone className="w-4 h-4" />
-                      Phone Number
-                    </label>
-                    <input
-                      type="tel"
-                      required
-                      value={formData.phone}
-                      onChange={(e) =>
-                        setFormData({ ...formData, phone: e.target.value })
-                      }
-                      placeholder="+92 300 1234567"
-                      className="w-full px-4 py-3 bg-blue-50 border border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800 transition-all"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <label className="block text-sm font-semibold text-gray-700 flex items-center gap-2">
-                    <Mail className="w-4 h-4" />
-                    Email Address
-                  </label>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
                   <input
                     type="email"
                     required
                     value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
-                    placeholder="your.email@example.com"
-                    className="w-full px-4 py-3 bg-blue-50 border border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800 transition-all"
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="your@email.com"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-base transition-all"
                   />
                 </div>
-              </form>
-            </div>
-
-            {/* Shipping Address */}
-            <div className="bg-white rounded-2xl shadow-xl border border-blue-100 p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <Home className="w-6 h-6 text-green-600" />
-                </div>
-                <h2 className="text-2xl font-bold text-blue-900">
-                  Shipping Address
-                </h2>
               </div>
+            </div>
+          )}
 
-              <div className="space-y-6">
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <label className="block text-sm font-semibold text-gray-700 flex items-center gap-2">
-                      <MapPin className="w-4 h-4" />
-                      City
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.city}
-                      onChange={(e) =>
-                        setFormData({ ...formData, city: e.target.value })
-                      }
-                      placeholder="Enter your city"
-                      className="w-full px-4 py-3 bg-blue-50 border border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800 transition-all"
-                    />
-                  </div>
+          {/* STEP 2: Shipping Address */}
+          {currentStep === 2 && (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 animate-fade-in">
+              <h2 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <Home className="w-5 h-5 text-green-600" />
+                Shipping Details
+              </h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.city}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    placeholder="Enter city"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-base transition-all"
+                  />
                 </div>
-
-                <div className="space-y-3">
-                  <label className="block text-sm font-semibold text-gray-700 flex items-center gap-2">
-                    <Home className="w-4 h-4" />
-                    Complete Address
-                  </label>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Complete Address</label>
                   <textarea
                     required
-                    rows={4}
+                    rows={3}
                     value={formData.address}
-                    onChange={(e) =>
-                      setFormData({ ...formData, address: e.target.value })
-                    }
-                    placeholder="House #, Street, Area, Landmarks..."
-                    className="w-full px-4 py-3 bg-blue-50 border border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800 transition-all resize-none"
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    placeholder="House #, Street, Area..."
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-base transition-all resize-none"
                   />
                 </div>
-
-                <div className="space-y-3">
-                  <label className="block text-sm font-semibold text-gray-700">
-                    Special Instructions (Optional)
-                  </label>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Special Instructions (Optional)</label>
                   <textarea
-                    rows={3}
+                    rows={2}
                     value={formData.instructions}
-                    onChange={(e) =>
-                      setFormData({ ...formData, instructions: e.target.value })
-                    }
-                    placeholder="Delivery time preferences, gate code, etc."
-                    className="w-full px-4 py-3 bg-blue-50 border border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800 transition-all resize-none"
+                    onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
+                    placeholder="Landmark, delivery time, etc."
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-base transition-all resize-none"
                   />
                 </div>
               </div>
             </div>
+          )}
 
-            {/* Payment Method */}
-            <div className="bg-white rounded-2xl shadow-xl border border-blue-100 p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <CreditCard className="w-6 h-6 text-purple-600" />
-                </div>
-                <h2 className="text-2xl font-bold text-blue-900">
+          {/* STEP 3: Payment & Review */}
+          {currentStep === 3 && (
+            <div className="space-y-6 animate-fade-in">
+              {/* Payment Method */}
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-purple-600" />
                   Payment Method
                 </h2>
-              </div>
-
-              <div className="space-y-4">
-                <label className="flex items-center gap-4 p-4 border-2 border-blue-200 rounded-xl cursor-pointer hover:bg-blue-50 transition-colors">
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="cod"
-                    checked={paymentMethod === 'cod'}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-5 h-5 text-blue-600"
-                  />
-                  <div className="flex-1">
-                    <div className="font-bold text-gray-900">Cash on Delivery</div>
-                    <div className="text-sm text-gray-600">Pay when you receive your order</div>
+                <label className="flex items-center gap-4 p-4 border-2 border-blue-600 bg-blue-50/50 rounded-xl cursor-pointer transition-all">
+                  <div className="flex-shrink-0">
+                    <input
+                      type="radio"
+                      name="payment"
+                      value="cod"
+                      checked={paymentMethod === 'cod'}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      className="w-5 h-5 text-blue-600"
+                    />
                   </div>
-                  <div className="text-lg font-bold text-blue-700">Rs{total.toFixed(2)}</div>
-                </label>
-
-                <label className="flex items-center gap-4 p-4 border-2 border-blue-200 rounded-xl cursor-pointer hover:bg-blue-50 transition-colors">
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="card"
-                    checked={paymentMethod === 'card'}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-5 h-5 text-blue-600"
-                  />
-                  <div className="flex-1">
-                    <div className="font-bold text-gray-900">Credit/Debit Card</div>
-                    <div className="text-sm text-gray-600">Secure online payment</div>
+                  <div>
+                    <div className="font-bold text-gray-900">Pay on Delivery</div>
+                    <div className="text-sm text-gray-600">Pay securely when you receive your order</div>
                   </div>
-                  <Shield className="w-6 h-6 text-green-500" />
                 </label>
               </div>
-            </div>
-          </div>
 
-          {/* Right Column: Order Summary */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Order Summary Card */}
-            <div className="sticky top-24">
-              <div className="bg-white rounded-2xl shadow-xl border border-blue-100 p-6">
-                <h2 className="text-2xl font-bold text-blue-900 mb-6 flex items-center gap-2">
-                  <Package className="w-6 h-6" />
+              {/* Order Summary */}
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <Package className="w-5 h-5 text-blue-600" />
                   Order Summary
                 </h2>
-
-                {/* Order Items */}
-                <div className="space-y-4 mb-6 max-h-80 overflow-y-auto pr-2">
+                <div className="space-y-3 mb-4 max-h-48 overflow-y-auto">
                   {cartItems.map((item) => (
-                    <div key={item.id} className="flex gap-3 p-3 bg-blue-50/50 rounded-lg">
-                      <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-lg overflow-hidden">
-                        <img
-                          src={item.image_url}
-                          alt={item.title}
-                          className="w-full h-full object-cover"
-                        />
+                    <div key={item.id} className="flex gap-3 text-sm">
+                      <div className="w-12 h-12 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
+                        <img src={item.image_url} alt="" className="w-full h-full object-cover" />
                       </div>
-                      <div className="flex-1">
-                        <div className="font-medium text-gray-900 line-clamp-1">{item.title}</div>
-                        <div className="flex justify-between items-center mt-1">
-                          <div className="text-sm text-gray-600">Qty: {item.quantity}</div>
-                          <div className="font-bold text-blue-700">Rs{(item.price * item.quantity).toFixed(2)}</div>
-                        </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-gray-900 truncate">{item.title}</div>
+                        <div className="text-gray-500 text-xs mt-1">{item.quantity} x Rs{item.price}</div>
                       </div>
+                      <div className="font-semibold">Rs{(item.price * item.quantity).toFixed(0)}</div>
                     </div>
                   ))}
                 </div>
-
-                {/* Price Breakdown */}
-                <div className="space-y-3 border-t border-blue-200 pt-4">
-                  <div className="flex justify-between items-center">
+                
+                <div className="border-t pt-4 space-y-2 text-sm">
+                  <div className="flex justify-between">
                     <span className="text-gray-600">Subtotal</span>
-                    <span className="font-semibold text-gray-900">Rs{subtotal.toFixed(2)}</span>
+                    <span className="font-medium">Rs{subtotal.toFixed(2)}</span>
                   </div>
-                  
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                      <Truck className="w-4 h-4 text-blue-500" />
-                      <span className="text-gray-600">Delivery</span>
-                    </div>
-                    <span className={`font-semibold ${isFreeShipping ? 'text-green-600' : 'text-red-600'}`}>
-                      {isFreeShipping ? 'FREE' : `Rs${SHIPPING_CHARGE}.00`}
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Delivery</span>
+                    <span className={`font-medium ${isFreeShipping ? 'text-green-600' : ''}`}>
+                      {isFreeShipping ? 'FREE' : `Rs${SHIPPING_CHARGE}`}
                     </span>
                   </div>
-
-                  {/* Delivery Note */}
-                  {!isFreeShipping && (
-                    <div className="text-xs text-gray-500 bg-yellow-50 p-2 rounded-lg">
-                      Add Rs{remainingForFreeShipping.toFixed(2)} more to get FREE delivery!
-                    </div>
-                  )}
-
-                  {/* Total */}
-                  <div className="border-t pt-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-lg font-bold text-blue-900">Total Amount</span>
-                      <div className="text-right">
-                        <div className="text-3xl font-bold text-blue-900">
-                          Rs{total.toFixed(2)}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {paymentMethod === 'cod' ? 'Pay on delivery' : 'Pay online'}
-                        </div>
-                      </div>
-                    </div>
+                  <div className="flex justify-between text-lg font-bold text-gray-900 pt-2 border-t mt-2">
+                    <span>Total</span>
+                    <span>Rs{total.toFixed(2)}</span>
                   </div>
                 </div>
-
-                {/* Submit Button */}
-                <button
-                  type="submit"
-                  onClick={handleSubmit}
-                  disabled={isProcessing}
-                  className="w-full mt-6 bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-6 py-4 rounded-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-lg shadow-lg flex items-center justify-center gap-3"
-                >
-                  {isProcessing ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Processing Order...
-                    </>
-                  ) : (
-                    <>
-                      <Lock className="w-6 h-6" />
-                      Place Secure Order
-                    </>
-                  )}
-                </button>
-
-                {/* Security Message */}
-                <div className="text-center mt-4 text-sm text-gray-500 flex items-center justify-center gap-2">
-                  <Shield className="w-4 h-4" />
-                  Your information is protected with 256-bit SSL encryption
-                </div>
-              </div>
-
-              {/* Delivery Info */}
-              <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl border border-blue-200 p-5 mt-6">
-                <h3 className="font-bold text-blue-900 mb-3 flex items-center gap-2">
-                  <Truck className="w-5 h-5" />
-                  Delivery Information
-                </h3>
-                <ul className="space-y-3 text-sm">
-                  <li className="flex items-center gap-2 text-gray-700">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="font-semibold">FREE delivery</span> on orders above Rs{SHIPPING_THRESHOLD}
-                  </li>
-                  <li className="flex items-center gap-2 text-gray-700">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span className="font-semibold">Rs{SHIPPING_CHARGE} delivery charge</span> for orders below Rs{SHIPPING_THRESHOLD}
-                  </li>
-                  <li className="flex items-center gap-2 text-gray-700">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    Same-day delivery for orders before 2 PM
-                  </li>
-                  <li className="flex items-center gap-2 text-gray-700">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    Professional handling of cleaning products
-                  </li>
-                </ul>
               </div>
             </div>
-          </div>
+          )}
+        </form>
+      </div>
+
+      {/* Sticky Bottom Navigation - Increased z-index and shadow */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-40">
+        <div className="container mx-auto max-w-lg flex gap-3">
+          {currentStep > 1 && (
+            <button
+              onClick={handleBack}
+              disabled={isProcessing}
+              className="px-6 py-3 border border-gray-300 rounded-xl font-bold text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center"
+            >
+              <ChevronLeft className="w-5 h-5 mr-1" /> Back
+            </button>
+          )}
+          
+          {currentStep < 3 ? (
+            <button
+              onClick={handleNext}
+              className="flex-1 bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2"
+            >
+              Next Step <ChevronRight className="w-5 h-5" />
+            </button>
+          ) : (
+            <button
+              onClick={handleSubmit}
+              disabled={isProcessing}
+              className="flex-1 bg-gradient-to-r from-green-600 to-green-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl active:scale-95 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {isProcessing ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Lock className="w-5 h-5" /> Place Order
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
     </div>
