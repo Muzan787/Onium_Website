@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase, Order, OrderItem } from '../../lib/supabase';
 import { CreditCard, Banknote, Truck, AlertCircle } from 'lucide-react';
+import toast from 'react-hot-toast'; // Import toast
 
 interface OrderWithItems extends Order {
   order_items: OrderItem[];
@@ -57,7 +58,7 @@ export default function AdminOrders() {
       fetchOrders();
     } catch (error) {
       console.error('Error updating order:', error);
-      alert('Failed to update order status');
+      toast.error('Failed to update order status');
     }
   };
 

@@ -1,61 +1,96 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast'; // Import Toaster
+
 import { CartProvider } from './context/CartContext';
 import { AuthProvider } from './context/AuthContext';
+
 import Header from './components/Header';
+import Footer from './components/Footer';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminLayout from './components/AdminLayout';
+
 import Home from './pages/Home';
 import ProductDetail from './pages/ProductDetail';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
+import Reviews from './pages/Reviews';
+import About from './pages/About';
+import TrackOrder from './pages/TrackOrder';
+
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminProducts from './pages/admin/AdminProducts';
 import AdminDeals from './pages/admin/AdminDeals';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminReviews from './pages/admin/AdminReviews';
-import Reviews from './pages/Reviews';
-import About from './pages/About';
 
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <CartProvider>
-          <Routes>
-            <Route
-              path="/*"
-              element={
-                <>
-                  <Header />
-                  <Routes>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/product/:id" element={<ProductDetail />} />
-                    <Route path="/cart" element={<Cart />} />
-                    <Route path="/checkout" element={<Checkout />} />
-                    <Route path="/reviews" element={<Reviews />} />
-                    <Route path="/about" element={<About />} />
-                  </Routes>
-                </>
-              }
+            {/* Add Toaster here */}
+            <Toaster 
+              position="top-center" 
+              toastOptions={{
+                duration: 3000,
+                style: {
+                  background: '#333',
+                  color: '#fff',
+                  borderRadius: '10px',
+                },
+                success: {
+                  style: { background: '#10b981' }, // Emerald for success
+                  iconTheme: { primary: '#fff', secondary: '#10b981' },
+                },
+                error: {
+                  style: { background: '#ef4444' }, // Red for error
+                  iconTheme: { primary: '#fff', secondary: '#ef4444' },
+                },
+              }}
             />
+            
+            <div className="flex flex-col min-h-screen">
+              <Routes>
+                {/* Admin Routes */}
+                <Route path="/admin" element={<AdminLogin />} />
+                <Route
+                  path="/admin/*"
+                  element={
+                    <ProtectedRoute>
+                      <AdminLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route path="dashboard" element={<AdminProducts />} />
+                  <Route path="deals" element={<AdminDeals />} />
+                  <Route path="orders" element={<AdminOrders />} />
+                  <Route path="reviews" element={<AdminReviews />} />
+                  <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
+                </Route>
 
-            <Route path="/admin" element={<AdminLogin />} />
-
-            <Route
-              path="/admin/*"
-              element={
-                <ProtectedRoute>
-                  <AdminLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route path="dashboard" element={<AdminProducts />} />
-              <Route path="deals" element={<AdminDeals />} />
-              <Route path="orders" element={<AdminOrders />} />
-              <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
-              <Route path="reviews" element={<AdminReviews />} />
-            </Route>
-          </Routes>
+                {/* Public Routes */}
+                <Route
+                  path="/*"
+                  element={
+                    <>
+                      <Header />
+                      <main className="flex-grow">
+                        <Routes>
+                          <Route path="/" element={<Home />} />
+                          <Route path="/product/:id" element={<ProductDetail />} />
+                          <Route path="/cart" element={<Cart />} />
+                          <Route path="/checkout" element={<Checkout />} />
+                          <Route path="/reviews" element={<Reviews />} />
+                          <Route path="/about" element={<About />} />
+                          <Route path="/track-order" element={<TrackOrder />} />
+                        </Routes>
+                      </main>
+                      <Footer />
+                    </>
+                  }
+                />
+              </Routes>
+            </div>
         </CartProvider>
       </AuthProvider>
     </BrowserRouter>

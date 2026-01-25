@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast'; // Import toast
 import { useCart } from '../context/CartContext';
 import { supabase } from '../lib/supabase';
 import { CheckCircle, Truck, Shield, CreditCard, Package, Home, User, MapPin, MessageCircle, Lock, ArrowLeft, ChevronRight, ChevronLeft } from 'lucide-react';
@@ -49,7 +50,7 @@ export default function Checkout() {
       setCurrentStep(curr => curr + 1);
       window.scrollTo(0, 0);
     } else {
-      alert('Please fill in all required fields to proceed.');
+      toast.error('Please fill in all required fields to proceed.');
     }
   };
 
@@ -106,7 +107,7 @@ export default function Checkout() {
       clearCart();
     } catch (error) {
       console.error('Error placing order:', error);
-      alert('Failed to place order. Please try again.');
+      toast.error('Failed to place order. Please try again.');
     } finally {
       setIsProcessing(false);
     }

@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import toast from 'react-hot-toast'; // Import toast
 import { ArrowLeft, ShoppingCart, Minus, Plus, Shield, Truck, RefreshCw, Star, Package, Droplets, Leaf, Check, Share2, Heart, CheckCircle, X, Maximize2 } from 'lucide-react';
 import { supabase, Product, Review } from '../lib/supabase';
 import { useCart } from '../context/CartContext';
 import ProductCard from '../components/ProductCard';
+import SEO from '../components/SEO'; // NEW
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -121,7 +123,7 @@ export default function ProductDetail() {
       setReviewFile(null);
       setTimeout(() => setReviewMessage(''), 5000);
     } else {
-      alert("Failed to submit review.");
+      toast.error("Failed to submit review.");
     }
     setIsSubmittingReview(false);
   };
@@ -161,6 +163,14 @@ export default function ProductDetail() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white pb-32">
       
+      {/* NEW: SEO Component */}
+      <SEO 
+        title={product.title} 
+        description={product.description} 
+        image={product.image_url}
+        url={`https://onium.store/product/${product.id}`}
+      />
+
       {/* Lightbox Modal */}
       {showLightbox && (
         <div className="fixed inset-0 z-[60] bg-black bg-opacity-95 flex items-center justify-center animate-fade-in" onClick={() => setShowLightbox(false)}>
@@ -240,7 +250,7 @@ export default function ProductDetail() {
               {product.stock <= 10 && product.stock > 0 && (
                 <div className="absolute top-4 left-4 bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">
                   Only {product.stock} left!
-                </div>
+                </div>  
               )}
             </div>
 
@@ -250,11 +260,13 @@ export default function ProductDetail() {
                   <button
                     key={index}
                     onClick={() => setSelectedImage(index)}
-                    className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all ${selectedImage === index ? 'border-blue-500 scale-105' : 'border-gray-200 hover:border-blue-300'}`}
+                    className="..."
                   >
+                    {/* OPTIMIZATION: Lazy load thumbnails */}
                     <img
                       src={img}
                       alt={`${product.title} view ${index + 1}`}
+                      loading="lazy" 
                       className="w-full h-full object-cover"
                     />
                   </button>

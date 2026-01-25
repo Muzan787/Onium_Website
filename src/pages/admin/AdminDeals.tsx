@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Plus, Edit, Trash2, Eye, EyeOff } from 'lucide-react';
+import toast from 'react-hot-toast'; // Import toast
 import { supabase, Deal } from '../../lib/supabase';
 
 export default function AdminDeals() {
@@ -64,7 +65,7 @@ export default function AdminDeals() {
       fetchDeals();
     } catch (error) {
       console.error('Error saving deal:', error);
-      alert('Failed to save deal');
+      toast.error('Failed to save deal');
     }
   };
 
@@ -89,7 +90,7 @@ export default function AdminDeals() {
       fetchDeals();
     } catch (error) {
       console.error('Error deleting deal:', error);
-      alert('Failed to delete deal');
+      toast.error('Failed to delete deal');
     }
   };
 
@@ -104,7 +105,7 @@ export default function AdminDeals() {
       fetchDeals();
     } catch (error) {
       console.error('Error updating deal:', error);
-      alert('Failed to update deal');
+      toast.error('Failed to update deal');
     }
   };
 

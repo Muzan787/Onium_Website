@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { supabase, Product } from '../../lib/supabase';
+import toast from 'react-hot-toast'; // Import toast
 
 export default function AdminProducts() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -46,7 +47,7 @@ export default function AdminProducts() {
       try {
         specs = JSON.parse(formData.specifications);
       } catch {
-        alert('Invalid JSON format in specifications');
+        toast.error('Invalid JSON format in specifications');
         return;
       }
 
@@ -78,7 +79,7 @@ export default function AdminProducts() {
       fetchProducts();
     } catch (error) {
       console.error('Error saving product:', error);
-      alert('Failed to save product');
+      toast.error('Failed to save product');
     }
   };
 
@@ -106,7 +107,7 @@ export default function AdminProducts() {
       fetchProducts();
     } catch (error) {
       console.error('Error deleting product:', error);
-      alert('Failed to delete product');
+      toast.error('Failed to delete product');
     }
   };
 
