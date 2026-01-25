@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast'; // Import Toaster
+import { Toaster } from 'react-hot-toast'; 
 
 import { CartProvider } from './context/CartContext';
 import { AuthProvider } from './context/AuthContext';
@@ -8,6 +8,7 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminLayout from './components/AdminLayout';
+import ScrollToTop from './components/ScrollToTop'; // <--- IMPORT THIS
 
 import Home from './pages/Home';
 import ProductDetail from './pages/ProductDetail';
@@ -26,9 +27,11 @@ import AdminReviews from './pages/admin/AdminReviews';
 function App() {
   return (
     <BrowserRouter>
+      {/* ADD SCROLL TO TOP HERE */}
+      <ScrollToTop /> 
+      
       <AuthProvider>
         <CartProvider>
-            {/* Add Toaster here */}
             <Toaster 
               position="top-center" 
               toastOptions={{
@@ -39,11 +42,11 @@ function App() {
                   borderRadius: '10px',
                 },
                 success: {
-                  style: { background: '#10b981' }, // Emerald for success
+                  style: { background: '#10b981' },
                   iconTheme: { primary: '#fff', secondary: '#10b981' },
                 },
                 error: {
-                  style: { background: '#ef4444' }, // Red for error
+                  style: { background: '#ef4444' },
                   iconTheme: { primary: '#fff', secondary: '#ef4444' },
                 },
               }}
