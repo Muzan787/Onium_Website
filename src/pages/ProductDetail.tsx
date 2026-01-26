@@ -8,7 +8,7 @@ import ProductCard from '../components/ProductCard';
 import SEO from '../components/SEO';
 
 export default function ProductDetail() {
-  const { id } = useParams();
+  const { slug } = useParams(); 
   const { addToCart } = useCart();
   const [product, setProduct] = useState<Product | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
@@ -34,11 +34,11 @@ export default function ProductDetail() {
     : 0;
 
   useEffect(() => {
-    if (id) {
+    if (slug) { // Check for slug
       fetchProduct();
-      fetchProductReviews();
+      // Don't call fetchProductReviews here anymore, it's called inside fetchProduct
     }
-  }, [id]);
+  }, [slug]);
 
   // NEW: Handle Share Functionality
   const handleShare = async () => {
@@ -75,18 +75,19 @@ export default function ProductDetail() {
       const { data: productData, error: productError } = await supabase
         .from('products')
         .select('*')
-        .eq('id', id)
+        .eq('slug', slug)
         .maybeSingle();
 
       if (productError) throw productError;
       setProduct(productData);
 
       if (productData) {
+        fetchProductReviews(productData.id);
         const { data: relatedData } = await supabase
           .from('products')
           .select('*')
           .eq('category', productData.category)
-          .neq('id', id)
+          .neq('id', productData.id)
           .limit(4);
 
         setRelatedProducts(relatedData || []);
@@ -98,12 +99,12 @@ export default function ProductDetail() {
     }
   };
 
-  const fetchProductReviews = async () => {
+  const fetchProductReviews = async (productId: string) => {
     // ... (unchanged)
     const { data } = await supabase
       .from('reviews')
       .select('*')
-      .eq('product_id', id)
+      .eq('product_id', productId)
       .eq('is_approved', true)
       .order('created_at', { ascending: false });
     setProductReviews(data || []);

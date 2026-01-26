@@ -10,9 +10,11 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export interface Product {
+  [x: string]: any;
   additional_images?: string[]; // Fixed type
   unit?: string; // Optional
   id: string;
+  slug: string;
   title: string;
   description: string;
   price: number;

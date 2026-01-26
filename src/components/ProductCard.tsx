@@ -50,7 +50,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   return (
     <div className="group relative">
       <Link
-        to={`/product/${product.id}`}
+        to={`/product/${product.slug  }`}
         className="block bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 border border-slate-100 hover:border-primary-200"
       >
         <div className="relative aspect-square overflow-hidden bg-slate-50 group-hover:bg-primary-50/30 transition-colors">

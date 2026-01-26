@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
-import 'dotenv/config'; // You might need to install dotenv: npm install dotenv
+import 'dotenv/config'; 
 
 // distinct from your src/lib/supabase.ts because this runs in Node
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
@@ -13,8 +13,11 @@ async function generateSitemap() {
   // 1. Static Pages
   const pages = ['', '/products', '/about', '/contact', '/faq', '/shipping-policy', '/return-policy', '/track-order'];
   
-  // 2. Fetch Dynamic Product IDs
-  const { data: products } = await supabase.from('products').select('id, updated_at');
+  // 2. Fetch Dynamic Product Slugs (Changed from IDs)
+  // We select 'slug' and 'updated_at' to build the correct links
+  const { data: products } = await supabase
+    .from('products')
+    .select('slug, updated_at'); 
 
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -27,7 +30,7 @@ async function generateSitemap() {
   `).join('')}
   ${products?.map(product => `
     <url>
-      <loc>${DOMAIN}/product/${product.id}</loc>
+      <loc>${DOMAIN}/product/${product.slug}</loc>
       <lastmod>${new Date(product.updated_at).toISOString()}</lastmod>
       <changefreq>weekly</changefreq>
       <priority>0.9</priority>
