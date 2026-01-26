@@ -40,6 +40,13 @@ export default function ProductCard({ product }: ProductCardProps) {
 
   const stockStatus = getStockStatus();
 
+  // FIX: Ensure this is a true boolean to prevent "0" from rendering on screen
+  const hasDiscount = (product.discount || 0) > 0;
+  
+  const finalPrice = hasDiscount 
+    ? product.price * (1 - (product.discount || 0) / 100) 
+    : product.price;
+
   return (
     <div className="group relative">
       <Link
@@ -47,7 +54,6 @@ export default function ProductCard({ product }: ProductCardProps) {
         className="block bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 border border-slate-100 hover:border-primary-200"
       >
         <div className="relative aspect-square overflow-hidden bg-slate-50 group-hover:bg-primary-50/30 transition-colors">
-          {/* OPTIMIZATION: Added loading="lazy" */}
           <img
             src={product.image_url}
             alt={product.title}
@@ -55,20 +61,31 @@ export default function ProductCard({ product }: ProductCardProps) {
             className="w-full h-full object-contain p-4 md:p-6 group-hover:scale-105 transition-transform duration-500"
           />
           
+          {/* TOP LEFT: Category Badge */}
           <div className="hidden sm:block absolute top-3 left-3">
             <span className="bg-white/90 backdrop-blur-sm text-primary-700 text-xs font-bold px-3 py-1.5 rounded-full capitalize shadow-sm border border-primary-100">
               {product.category}
             </span>
           </div>
 
-          {product.stock <= 10 && product.stock > 0 && (
-            <div className="absolute top-2 right-2 md:top-3 md:right-3">
-              <div className={`${stockStatus.color} text-white text-[10px] md:text-xs font-bold px-2 py-1 md:px-3 md:py-1.5 rounded-full shadow-lg`}>
+          {/* TOP RIGHT CONTAINER: Discount & Stock */}
+          <div className="absolute top-2 right-2 md:top-3 md:right-3 flex flex-col gap-2 items-end z-10">
+            {/* 1. Discount Badge (Primary) */}
+            {hasDiscount && (
+              <div className="bg-red-500 text-white text-[10px] md:text-xs font-bold px-2 py-1 rounded-full shadow-lg animate-pulse">
+                {product.discount}% OFF
+              </div>
+            )}
+
+            {/* 2. Low Stock Badge (Secondary, below discount) */}
+            {product.stock <= 10 && product.stock > 0 && (
+              <div className={`${stockStatus.color} text-white text-[10px] md:text-xs font-bold px-2 py-1 rounded-full shadow-lg`}>
                 {stockStatus.text}
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
+          {/* Out of Stock Overlay */}
           {product.stock === 0 && (
             <div className="absolute inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center">
               <div className="bg-slate-900 text-white px-3 py-1.5 md:px-4 md:py-2 text-sm md:text-base rounded-lg font-bold">
@@ -116,12 +133,24 @@ export default function ProductCard({ product }: ProductCardProps) {
             <div>
               <div className="flex flex-col md:flex-row md:items-baseline gap-1 md:gap-2">
                 <span className="text-lg md:text-xl font-bold text-slate-900">
-                  Rs{product.price.toFixed(2)}
+                  Rs{finalPrice.toFixed(0)}
                 </span>
+                {hasDiscount && (
+                  <span className="text-sm text-slate-400 line-through">
+                    Rs{product.price.toFixed(0)}
+                  </span>
+                )}
               </div>
-              <div className="text-[10px] md:text-xs text-primary-600 font-bold flex items-center gap-1 mt-0.5">
-                Best Price
-              </div>
+              
+              {hasDiscount ? (
+                <div className="text-[10px] md:text-xs text-green-600 font-bold mt-0.5">
+                  Save Rs{(product.price - finalPrice).toFixed(0)}
+                </div>
+              ) : (
+                <div className="text-[10px] md:text-xs text-primary-600 font-bold flex items-center gap-1 mt-0.5">
+                  Best Price
+                </div>
+              )}
             </div>
           </div>
         </div>

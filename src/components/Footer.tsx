@@ -37,7 +37,8 @@ export default function Footer() {
             <h3 className="text-white font-bold text-lg mb-6">Quick Links</h3>
             <ul className="space-y-4">
               <li><Link to="/" className="hover:text-primary-400 transition-colors flex items-center gap-2"><ArrowRight className="w-4 h-4" /> Home</Link></li>
-              <li><Link to="/products" className="hover:text-primary-400 transition-colors flex items-center gap-2"><ArrowRight className="w-4 h-4" /> Shop All</Link></li>
+              {/* UPDATED: Points to #products ID on Home page */}
+              <li><a href="/#products" className="hover:text-primary-400 transition-colors flex items-center gap-2"><ArrowRight className="w-4 h-4" /> Shop All</a></li>
               <li><Link to="/about" className="hover:text-primary-400 transition-colors flex items-center gap-2"><ArrowRight className="w-4 h-4" /> About Us</Link></li>
               <li><Link to="/track-order" className="hover:text-primary-400 transition-colors flex items-center gap-2"><ArrowRight className="w-4 h-4" /> Track Order</Link></li>
             </ul>
@@ -48,8 +49,8 @@ export default function Footer() {
             <h3 className="text-white font-bold text-lg mb-6">Customer Care</h3>
             <ul className="space-y-4">
               <li><Link to="/contact" className="hover:text-primary-400 transition-colors">Contact Us</Link></li>
-              <li><Link to="/shipping" className="hover:text-primary-400 transition-colors">Shipping Policy</Link></li>
-              <li><Link to="/returns" className="hover:text-primary-400 transition-colors">Returns & Refunds</Link></li>
+              <li><Link to="/shipping-policy" className="hover:text-primary-400 transition-colors">Shipping Policy</Link></li>
+              <li><Link to="/return-policy" className="hover:text-primary-400 transition-colors">Returns & Refunds</Link></li>
               <li><Link to="/faq" className="hover:text-primary-400 transition-colors">FAQs</Link></li>
             </ul>
           </div>

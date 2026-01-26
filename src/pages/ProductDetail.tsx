@@ -18,6 +18,9 @@ export default function ProductDetail() {
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [showLightbox, setShowLightbox] = useState(false);
+  
+  const hasDiscount = product?.discount && product?.discount > 0;
+  const finalPrice = product ? (hasDiscount ? product.price * (1 - product.discount! / 100) : product.price) : 0;
 
   // ... (Review states remain unchanged)
   const [productReviews, setProductReviews] = useState<Review[]>([]);
@@ -234,10 +237,24 @@ export default function ProductDetail() {
 
             <div className="bg-primary-50/50 p-6 rounded-3xl border border-primary-100">
               <div className="mb-6">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl md:text-5xl font-bold text-slate-900">Rs{product.price.toFixed(2)}</span>
-                  <span className="text-sm text-slate-500 font-medium">per {product.unit || 'item'}</span>
+                <div className="flex items-baseline gap-3">
+                  <span className="text-3xl md:text-5xl font-bold text-slate-900">
+                    Rs{finalPrice.toFixed(2)}
+                  </span>
+                  {hasDiscount && (
+                    <>
+                      <span className="text-lg text-slate-400 line-through font-medium">
+                        Rs{product.price.toFixed(2)}
+                      </span>
+                      <span className="bg-red-100 text-red-700 px-2 py-1 rounded-lg text-sm font-bold">
+                        -{product.discount}%
+                      </span>
+                    </>
+                  )}
                 </div>
+                <span className="text-sm text-slate-500 font-medium block mt-1">
+                  per {product.unit || 'item'}
+                </span>
                 {product.stock > 0 && <div className="mt-2 text-primary-700 font-semibold flex items-center gap-2 text-sm"><div className="w-2 h-2 bg-primary-500 rounded-full animate-pulse"></div>In Stock & Ready to Ship</div>}
               </div>
 

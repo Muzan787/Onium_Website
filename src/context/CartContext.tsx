@@ -1,6 +1,13 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Product } from '../lib/supabase';
 
+const getPrice = (item: Product) => {
+  if (item.discount && item.discount > 0) {
+    return item.price * (1 - item.discount / 100);
+  }
+  return item.price;
+};
+
 interface CartItem extends Product {
   quantity: number;
 }
@@ -18,6 +25,7 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
+  
   const [cartItems, setCartItems] = useState<CartItem[]>(() => {
     const savedCart = localStorage.getItem('onium_cart');
     return savedCart ? JSON.parse(savedCart) : [];
@@ -62,7 +70,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const getTotalPrice = () => {
-    return cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
+    return cartItems.reduce((total, item) => {
+      const finalPrice = getPrice(item); // Use helper
+      return total + finalPrice * item.quantity;
+    }, 0);
   };
 
   const getTotalItems = () => {

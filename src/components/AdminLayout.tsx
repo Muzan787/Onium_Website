@@ -44,6 +44,18 @@ export default function AdminLayout() {
               }`}
             >
               <Package className="w-5 h-5" />
+              Dashboard
+            </Link>
+
+            <Link
+              to="/admin/products"
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition ${
+                isActive('/admin/dashboard')
+                  ? 'bg-slate-900 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <Package className="w-5 h-5" />
               Products
             </Link>
 

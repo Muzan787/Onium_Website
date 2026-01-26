@@ -8,7 +8,7 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminLayout from './components/AdminLayout';
-import ScrollToTop from './components/ScrollToTop'; // <--- IMPORT THIS
+import ScrollToTop from './components/ScrollToTop';
 
 import Home from './pages/Home';
 import ProductDetail from './pages/ProductDetail';
@@ -17,7 +17,12 @@ import Checkout from './pages/Checkout';
 import Reviews from './pages/Reviews';
 import About from './pages/About';
 import TrackOrder from './pages/TrackOrder';
+import FAQ from './pages/FAQ'; 
+import Contact from './pages/Contact'; 
+import ShippingPolicy from './pages/ShippingPolicy';
+import ReturnPolicy from './pages/ReturnPolicy';
 
+import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminProducts from './pages/admin/AdminProducts';
 import AdminDeals from './pages/admin/AdminDeals';
@@ -64,7 +69,8 @@ function App() {
                     </ProtectedRoute>
                   }
                 >
-                  <Route path="dashboard" element={<AdminProducts />} />
+                  <Route path="dashboard" element={<AdminDashboard />} /> {/* Updated */}
+                  <Route path="products" element={<AdminProducts />} />
                   <Route path="deals" element={<AdminDeals />} />
                   <Route path="orders" element={<AdminOrders />} />
                   <Route path="reviews" element={<AdminReviews />} />
@@ -85,6 +91,10 @@ function App() {
                           <Route path="/checkout" element={<Checkout />} />
                           <Route path="/reviews" element={<Reviews />} />
                           <Route path="/about" element={<About />} />
+                          <Route path="/faq" element={<FAQ />} />
+                          <Route path="/contact" element={<Contact />} /> 
+                          <Route path="/shipping-policy" element={<ShippingPolicy />} />
+                          <Route path="/return-policy" element={<ReturnPolicy />} />
                           <Route path="/track-order" element={<TrackOrder />} />
                         </Routes>
                       </main>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase, Order, OrderItem } from '../../lib/supabase';
-import { CreditCard, Banknote, Truck, AlertCircle } from 'lucide-react';
-import toast from 'react-hot-toast'; // Import toast
+import { CreditCard, Banknote, Truck, AlertCircle, Printer, X } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 interface OrderWithItems extends Order {
   order_items: OrderItem[];
@@ -56,10 +56,153 @@ export default function AdminOrders() {
 
       if (error) throw error;
       fetchOrders();
+      toast.success(`Order status updated to ${status}`);
     } catch (error) {
       console.error('Error updating order:', error);
       toast.error('Failed to update order status');
     }
+  };
+
+  const handlePrintInvoice = (order: OrderWithItems) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error('Please allow popups to print invoices');
+      return;
+    }
+
+    const subtotal = order.subtotal_price || (order.total_price - (order.shipping_charge || 0));
+    const shipping = order.shipping_charge || 0;
+
+    const invoiceHTML = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Invoice #${order.id.slice(0, 8).toUpperCase()} - Onium</title>
+        <style>
+          body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 40px; color: #1f2937; max-width: 800px; margin: 0 auto; }
+          .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; border-bottom: 2px solid #f3f4f6; padding-bottom: 20px; }
+          .logo { font-size: 28px; font-weight: 800; color: #059669; letter-spacing: -1px; margin: 0; }
+          .invoice-tag { font-size: 14px; text-transform: uppercase; color: #6b7280; letter-spacing: 2px; font-weight: 600; margin-top: 5px; }
+          .meta-group { text-align: right; }
+          .meta-item { margin-bottom: 4px; font-size: 14px; }
+          .meta-label { color: #6b7280; font-weight: 500; margin-right: 8px; }
+          .meta-value { font-weight: 600; }
+          
+          .grid { display: flex; gap: 40px; margin-bottom: 40px; }
+          .col { flex: 1; }
+          .section-title { font-size: 12px; text-transform: uppercase; color: #9ca3af; font-weight: 700; letter-spacing: 1px; margin-bottom: 12px; }
+          .address-box { background: #f9fafb; padding: 15px; border-radius: 8px; font-size: 14px; line-height: 1.6; }
+          .address-name { font-weight: 700; font-size: 16px; margin-bottom: 4px; display: block; }
+          
+          table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+          th { text-align: left; padding: 12px 0; border-bottom: 2px solid #e5e7eb; font-size: 12px; text-transform: uppercase; color: #6b7280; font-weight: 700; }
+          td { padding: 16px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px; }
+          .text-right { text-align: right; }
+          .item-name { font-weight: 600; color: #111827; }
+          .item-qty { color: #6b7280; font-size: 13px; }
+          
+          .totals { width: 300px; margin-left: auto; }
+          .total-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px; }
+          .total-row.final { border-top: 2px solid #111827; margin-top: 10px; padding-top: 15px; font-weight: 800; font-size: 18px; }
+          
+          .footer { margin-top: 60px; text-align: center; color: #9ca3af; font-size: 12px; border-top: 1px solid #f3f4f6; padding-top: 30px; }
+          
+          @media print {
+            body { padding: 0; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <h1 class="logo">ONIUM.</h1>
+            <div class="invoice-tag">Packing Slip / Invoice</div>
+          </div>
+          <div class="meta-group">
+            <div class="meta-item"><span class="meta-label">Order ID:</span> <span class="meta-value">#${order.id.slice(0, 8).toUpperCase()}</span></div>
+            <div class="meta-item"><span class="meta-label">Date:</span> <span class="meta-value">${new Date(order.created_at).toLocaleDateString()}</span></div>
+            <div class="meta-item"><span class="meta-label">Payment:</span> <span class="meta-value" style="text-transform: capitalize;">${order.payment_method === 'cod' ? 'Cash on Delivery' : order.payment_method}</span></div>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div class="col">
+            <div class="section-title">Billed To</div>
+            <div class="address-box">
+              <span class="address-name">${order.customer_name}</span>
+              ${order.customer_email}<br>
+              ${order.customer_phone}
+            </div>
+          </div>
+          <div class="col">
+            <div class="section-title">Shipped To</div>
+            <div class="address-box">
+              <span class="address-name">${order.customer_name}</span>
+              ${order.customer_address}
+            </div>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th width="50%">Item</th>
+              <th width="15%" class="text-right">Price</th>
+              <th width="15%" class="text-right">Qty</th>
+              <th width="20%" class="text-right">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${order.order_items.map(item => `
+              <tr>
+                <td>
+                  <div class="item-name">${item.product_title}</div>
+                </td>
+                <td class="text-right">Rs${item.price_at_purchase.toLocaleString()}</td>
+                <td class="text-right">${item.quantity}</td>
+                <td class="text-right">Rs${(item.price_at_purchase * item.quantity).toLocaleString()}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div class="totals">
+          <div class="total-row">
+            <span>Subtotal</span>
+            <span>Rs${subtotal.toLocaleString()}</span>
+          </div>
+          <div class="total-row">
+            <span>Shipping</span>
+            <span>Rs${shipping.toLocaleString()}</span>
+          </div>
+          <div class="total-row final">
+            <span>Total</span>
+            <span>Rs${order.total_price.toLocaleString()}</span>
+          </div>
+        </div>
+
+        ${order.special_instructions ? `
+          <div style="margin-top: 40px; background: #fffbeb; padding: 15px; border-radius: 8px; border: 1px solid #fcd34d;">
+            <div class="section-title" style="color: #92400e; margin-bottom: 5px;">Special Instructions</div>
+            <div style="color: #92400e; font-size: 14px;">${order.special_instructions}</div>
+          </div>
+        ` : ''}
+
+        <div class="footer">
+          <p>Thank you for choosing Onium! If you have any questions, contact us at +92 323 1550147.</p>
+          <p>Islamabad, Pakistan</p>
+        </div>
+
+        <script>
+          window.onload = function() { window.print(); }
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(invoiceHTML);
+    printWindow.document.close();
   };
 
   const getStatusColor = (status: string) => {
@@ -147,7 +290,7 @@ export default function AdminOrders() {
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
                       onClick={() => setSelectedOrder(order)}
-                      className="text-blue-600 hover:text-blue-900 font-semibold"
+                      className="text-primary-600 hover:text-primary-900 font-semibold"
                     >
                       View
                     </button>
@@ -177,12 +320,22 @@ export default function AdminOrders() {
                     ID: <span className="font-mono">{selectedOrder.id}</span>
                   </p>
                 </div>
-                <button
-                  onClick={() => setSelectedOrder(null)}
-                  className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-full transition-colors"
-                >
-                  <span className="text-2xl leading-none">&times;</span>
-                </button>
+                <div className="flex items-center gap-3">
+                  {/* NEW: Print Button */}
+                  <button
+                    onClick={() => handlePrintInvoice(selectedOrder)}
+                    className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors font-medium text-sm"
+                  >
+                    <Printer className="w-4 h-4" />
+                    Print Invoice
+                  </button>
+                  <button
+                    onClick={() => setSelectedOrder(null)}
+                    className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-full transition-colors"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
               </div>
 
               <div className="grid md:grid-cols-2 gap-8">
@@ -190,7 +343,7 @@ export default function AdminOrders() {
                 <div className="space-y-6">
                   <div>
                     <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <div className="w-1 h-4 bg-blue-500 rounded-full"></div>
+                      <div className="w-1 h-4 bg-primary-500 rounded-full"></div>
                       Customer Information
                     </h4>
                     <div className="bg-gray-50 rounded-xl p-4 space-y-3 text-sm border border-gray-100">
@@ -211,7 +364,7 @@ export default function AdminOrders() {
 
                   <div>
                     <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <div className="w-1 h-4 bg-green-500 rounded-full"></div>
+                      <div className="w-1 h-4 bg-secondary-500 rounded-full"></div>
                       Shipping & Payment
                     </h4>
                     <div className="bg-gray-50 rounded-xl p-4 space-y-3 text-sm border border-gray-100">
