@@ -1,8 +1,11 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { supabase } from '../lib/supabase';
-import { CheckCircle, Truck, Shield, CreditCard, Package, Home, User, MapPin, MessageCircle, Lock, ArrowLeft, ChevronRight, ChevronLeft } from 'lucide-react';
+import { 
+  CheckCircle, CreditCard, Package, Home, User, 
+  Ticket, X, Lock, ArrowLeft, ChevronRight, LogIn 
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function Checkout() {
@@ -19,13 +22,103 @@ export default function Checkout() {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({ name: '', email: '', phone: '', address: '', city: '', instructions: '' });
 
+  // --- NEW: AUTH STATE ---
+  const [user, setUser] = useState<any>(null);
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+
+  // --- COUPON LOGIC ---
+  const [couponCode, setCouponCode] = useState('');
+  const [discount, setDiscount] = useState(0);
+  const [isCouponApplied, setIsCouponApplied] = useState(false);
+  const [isCheckingCoupon, setIsCheckingCoupon] = useState(false);
+
   const SHIPPING_THRESHOLD = 2000;
   const SHIPPING_CHARGE = 200;
   const subtotal = getTotalPrice();
+
+  // 1. Check for Logged In User on Mount
+  useEffect(() => {
+    const checkUser = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          setUser(user);
+          // Auto-fill email and lock it
+          setFormData(prev => ({
+            ...prev,
+            email: user.email || '',
+            name: user.user_metadata?.full_name || prev.name
+          }));
+        }
+      } catch (error) {
+        console.error('Auth check failed', error);
+      } finally {
+        setIsLoadingAuth(false);
+      }
+    };
+    checkUser();
+  }, []);
+
+  // 2. Updated Coupon Handler with Login Check
+  const handleApplyCoupon = async () => {
+    if (!couponCode) return;
+    
+    // STRICT RULE: User must be logged in
+    if (!user) {
+      toast.error('You must log in to use coupons!');
+      // Optional: navigate('/login') here if you have a login page
+      return;
+    }
+    
+    // Basic Validation
+    if (couponCode.toUpperCase() !== 'WELCOME10') {
+      toast.error('Invalid coupon code');
+      setDiscount(0);
+      setIsCouponApplied(false);
+      return;
+    }
+
+    setIsCheckingCoupon(true);
+
+    try {
+      // 3. Database Check (Secure)
+      const { data: previousOrders, error } = await supabase
+        .from('orders')
+        .select('id')
+        .eq('customer_email', user.email) // Check against authenticated email
+        .ilike('special_instructions', `%${couponCode}%`)
+        .limit(1);
+
+      if (error) throw error;
+
+      if (previousOrders && previousOrders.length > 0) {
+        toast.error('You have already used this coupon!');
+        setDiscount(0);
+        setIsCouponApplied(false);
+      } else {
+        const discountAmount = subtotal * 0.10; // 10% Discount
+        setDiscount(discountAmount);
+        setIsCouponApplied(true);
+        toast.success('Welcome discount applied!');
+      }
+    } catch (err) {
+      console.error('Error checking coupon:', err);
+      toast.error('Could not verify coupon.');
+    } finally {
+      setIsCheckingCoupon(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setCouponCode('');
+    setDiscount(0);
+    setIsCouponApplied(false);
+    toast.success('Coupon removed');
+  };
+
   const isFreeShipping = subtotal >= SHIPPING_THRESHOLD;
   const shippingCharge = isFreeShipping ? 0 : SHIPPING_CHARGE;
-  
-  const total = subtotal + shippingCharge;
+  const total = subtotal - discount + shippingCharge;
 
   const validateStep = (step: number) => {
     switch (step) {
@@ -52,15 +145,17 @@ export default function Checkout() {
     try {
       const orderData = {
         customer_name: formData.name,
-        customer_email: formData.email,
+        customer_email: formData.email, // This is now the authenticated email if logged in
         customer_phone: formData.phone,
         customer_address: `${formData.address}, ${formData.city}`,
-        special_instructions: formData.instructions,
+        special_instructions: formData.instructions + (isCouponApplied ? ` [Coupon Applied: ${couponCode.toUpperCase()}]` : ''),
         subtotal_price: subtotal,
         shipping_charge: shippingCharge,
         total_price: total,
         status: 'pending',
         payment_method: paymentMethod,
+        // Optional: Save user_id if you have a column for it
+        // user_id: user?.id 
       };
 
       const { data: orderDataResp, error: orderError } = await supabase.from('orders').insert(orderData).select().single();
@@ -81,9 +176,7 @@ export default function Checkout() {
       setSavedOrderTotal(total);
       setOrderId(orderDataResp.id);
       setOrderComplete(true);
-      
       clearCart();
-      
       toast.success('Order placed successfully!');
     } catch (error) {
       console.error('Error placing order:', error);
@@ -111,11 +204,7 @@ export default function Checkout() {
           </div>
           <div className="space-y-3">
             <button onClick={() => navigate('/')} className="w-full bg-slate-900 text-white py-3.5 rounded-xl font-bold shadow-lg">Continue Shopping</button>
-            {/* UPDATED: Navigates to Internal Track Order Page */}
-            <button 
-              onClick={() => navigate('/track-order')} 
-              className="flex items-center justify-center gap-2 w-full border border-slate-200 text-slate-600 py-3.5 rounded-xl font-bold hover:bg-slate-50 transition-colors"
-            >
+            <button onClick={() => navigate('/track-order')} className="flex items-center justify-center gap-2 w-full border border-slate-200 text-slate-600 py-3.5 rounded-xl font-bold hover:bg-slate-50 transition-colors">
               <Package className="w-5 h-5" /> Track Order
             </button>
           </div>
@@ -139,20 +228,51 @@ export default function Checkout() {
 
       <div className="container mx-auto px-4 py-8 max-w-lg">
         <form id="checkout-form" onSubmit={handleSubmit} className="space-y-6">
+          
+          {/* STEP 1: CONTACT INFO */}
           {currentStep === 1 && (
             <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 animate-fade-in">
-              <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2"><User className="w-5 h-5 text-primary-500" /> Contact Info</h2>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2"><User className="w-5 h-5 text-primary-500" /> Contact Info</h2>
+                {/* Login Prompt if guest */}
+                {!user && !isLoadingAuth && (
+                  <Link to="/login" className="text-xs font-bold text-primary-600 bg-primary-50 px-3 py-1.5 rounded-full hover:bg-primary-100 transition-colors flex items-center gap-1">
+                    <LogIn className="w-3 h-3" /> Log In
+                  </Link>
+                )}
+              </div>
+              
               <div className="space-y-4">
                 {['name', 'phone', 'email'].map(field => (
                   <div key={field}>
                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">{field}</label>
-                    <input type={field === 'email' ? 'email' : field === 'phone' ? 'tel' : 'text'} required value={formData[field as keyof typeof formData]} onChange={(e) => setFormData({ ...formData, [field]: e.target.value })} className="w-full px-4 py-3.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 outline-none text-base bg-slate-50 focus:bg-white transition-all" placeholder={`Enter your ${field}`} />
+                    <div className="relative">
+                      <input 
+                        type={field === 'email' ? 'email' : field === 'phone' ? 'tel' : 'text'} 
+                        required 
+                        value={formData[field as keyof typeof formData]} 
+                        onChange={(e) => setFormData({ ...formData, [field]: e.target.value })} 
+                        // LOCK EMAIL IF LOGGED IN
+                        readOnly={field === 'email' && !!user}
+                        className={`w-full px-4 py-3.5 rounded-xl border border-slate-200 outline-none text-base transition-all ${
+                          field === 'email' && user 
+                            ? 'bg-slate-100 text-slate-500 cursor-not-allowed focus:border-slate-200' 
+                            : 'bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary-500'
+                        }`} 
+                        placeholder={`Enter your ${field}`} 
+                      />
+                      {/* Show lock icon if email is locked */}
+                      {field === 'email' && user && (
+                        <Lock className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
+          {/* STEP 2: SHIPPING */}
           {currentStep === 2 && (
             <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 animate-fade-in">
               <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2"><Home className="w-5 h-5 text-secondary-500" /> Shipping Details</h2>
@@ -164,16 +284,85 @@ export default function Checkout() {
             </div>
           )}
 
+          {/* STEP 3: PAYMENT & COUPONS */}
           {currentStep === 3 && (
             <div className="space-y-6 animate-fade-in">
+              {/* Payment Method */}
               <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
                 <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2"><CreditCard className="w-5 h-5 text-accent-500" /> Payment</h2>
                 <label className="flex items-center gap-4 p-4 border-2 border-primary-500 bg-primary-50/30 rounded-xl cursor-pointer"><div className="flex-shrink-0"><input type="radio" checked readOnly className="w-5 h-5 text-primary-600 focus:ring-primary-500" /></div><div><div className="font-bold text-slate-900">Cash on Delivery</div><div className="text-sm text-slate-500">Pay securely upon delivery</div></div></label>
               </div>
+
+              {/* Coupon Section */}
+              <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
+                 <div className="flex justify-between items-center mb-4">
+                   <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2"><Ticket className="w-5 h-5 text-primary-500" /> Discount Code</h2>
+                   {!user && <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-1 rounded">LOGIN REQUIRED</span>}
+                 </div>
+                 
+                 <div className="flex gap-2">
+                   <div className="relative flex-1">
+                     <input 
+                       type="text" 
+                       value={couponCode}
+                       onChange={(e) => setCouponCode(e.target.value)}
+                       disabled={isCouponApplied || isCheckingCoupon || !user} // DISABLED IF NO USER
+                       placeholder={user ? "Enter code (e.g. WELCOME10)" : "Log in to use coupons"}
+                       className={`w-full px-4 py-3 rounded-xl border outline-none transition-all ${
+                         !user 
+                          ? 'bg-slate-100 border-slate-200 cursor-not-allowed placeholder:text-slate-400'
+                          : isCouponApplied 
+                            ? 'bg-green-50 border-green-200 text-green-700 font-bold' 
+                            : 'bg-slate-50 border-slate-200 focus:ring-2 focus:ring-primary-500'
+                       }`}
+                     />
+                     {isCouponApplied && <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-green-500" />}
+                     {!user && <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />}
+                   </div>
+                   
+                   {isCouponApplied ? (
+                     <button type="button" onClick={removeCoupon} className="bg-red-50 text-red-500 px-4 py-3 rounded-xl hover:bg-red-100 transition-colors border border-red-100">
+                       <X className="w-5 h-5" />
+                     </button>
+                   ) : (
+                     <button 
+                        type="button" 
+                        onClick={handleApplyCoupon} 
+                        disabled={isCheckingCoupon || !user} // DISABLED IF NO USER
+                        className={`px-6 py-3 rounded-xl font-bold transition-colors ${
+                          !user 
+                           ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                           : 'bg-slate-900 text-white hover:bg-slate-800'
+                        }`}
+                     >
+                       {isCheckingCoupon ? '...' : 'Apply'}
+                     </button>
+                   )}
+                 </div>
+                 {!user && (
+                    <p className="text-xs text-slate-500 mt-2">
+                      <Link to="/login" className="text-primary-600 font-bold hover:underline">Click here to login</Link> to unlock discounts.
+                    </p>
+                 )}
+              </div>
+
+              {/* Summary */}
               <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
                 <h2 className="text-lg font-bold text-slate-900 mb-4">Summary</h2>
                 <div className="space-y-3 mb-4 max-h-48 overflow-y-auto">{cartItems.map((item) => (<div key={item.id} className="flex gap-3 text-sm border-b border-slate-50 pb-2 last:border-0"><div className="w-12 h-12 bg-slate-100 rounded-lg flex-shrink-0"><img src={item.image_url} alt="" className="w-full h-full object-contain mix-blend-multiply" /></div><div className="flex-1"><div className="font-bold text-slate-900 truncate">{item.title}</div><div className="text-slate-500 text-xs">{item.quantity} x Rs{item.price}</div></div><div className="font-bold text-slate-900">Rs{(item.price * item.quantity).toFixed(0)}</div></div>))}</div>
-                <div className="border-t border-slate-100 pt-4 space-y-2"><div className="flex justify-between text-sm text-slate-600"><span>Subtotal</span><span>Rs{subtotal.toFixed(2)}</span></div><div className="flex justify-between text-sm text-slate-600"><span>Delivery</span><span className={isFreeShipping ? 'text-primary-600 font-bold' : ''}>{isFreeShipping ? 'FREE' : `Rs${SHIPPING_CHARGE}`}</span></div><div className="flex justify-between text-lg font-bold text-slate-900 pt-2"><span>Total</span><span>Rs{total.toFixed(2)}</span></div></div>
+                <div className="border-t border-slate-100 pt-4 space-y-2">
+                  <div className="flex justify-between text-sm text-slate-600"><span>Subtotal</span><span>Rs{subtotal.toFixed(2)}</span></div>
+                  
+                  {isCouponApplied && (
+                     <div className="flex justify-between text-sm text-green-600 font-bold">
+                       <span>Discount (10%)</span>
+                       <span>-Rs{discount.toFixed(2)}</span>
+                     </div>
+                  )}
+
+                  <div className="flex justify-between text-sm text-slate-600"><span>Delivery</span><span className={isFreeShipping ? 'text-primary-600 font-bold' : ''}>{isFreeShipping ? 'FREE' : `Rs${SHIPPING_CHARGE}`}</span></div>
+                  <div className="flex justify-between text-lg font-bold text-slate-900 pt-2 border-t border-slate-50 mt-2"><span>Total</span><span>Rs{total.toFixed(2)}</span></div>
+                </div>
               </div>
             </div>
           )}
