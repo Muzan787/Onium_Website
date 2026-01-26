@@ -1,11 +1,11 @@
+// src/pages/admin/AdminDashboard.tsx
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { 
   DollarSign, ShoppingBag, Package, Clock, 
-  TrendingUp, CheckCircle, Truck, XCircle, ArrowRight, Calendar 
+  CheckCircle, Truck, XCircle, ArrowRight, Calendar 
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
@@ -15,7 +15,6 @@ export default function AdminDashboard() {
     productsCount: 0,
   });
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
-  const [chartData, setChartData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -28,7 +27,7 @@ export default function AdminDashboard() {
       const { data: orders, error: ordersError } = await supabase
         .from('orders')
         .select('*')
-        .order('created_at', { ascending: true }); // Ascending for correct chart timeline
+        .order('created_at', { ascending: true });
 
       if (ordersError) throw ordersError;
 
@@ -44,21 +43,6 @@ export default function AdminDashboard() {
       const totalOrders = orders?.length || 0;
       const pendingOrders = orders?.filter(o => o.status === 'pending').length || 0;
 
-      // --- Process Chart Data (Group by Date) ---
-      // We take the last 7 days or simply group all available data
-      const salesByDate: Record<string, number> = {};
-      
-      orders?.forEach(order => {
-        const date = new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        salesByDate[date] = (salesByDate[date] || 0) + order.total_price;
-      });
-
-      // Convert to array for Recharts
-      const formattedChartData = Object.keys(salesByDate).map(date => ({
-        date,
-        sales: salesByDate[date]
-      }));
-
       setStats({
         totalRevenue,
         totalOrders,
@@ -66,9 +50,8 @@ export default function AdminDashboard() {
         productsCount: count || 0,
       });
 
-      // Show last 5 orders for the list (need to reverse since we fetched ascending)
+      // Show last 5 orders for the list
       setRecentOrders([...(orders || [])].reverse().slice(0, 5));
-      setChartData(formattedChartData);
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -119,59 +102,6 @@ export default function AdminDashboard() {
         <StatCard title="Total Orders" value={stats.totalOrders} icon={ShoppingBag} color="bg-secondary-500" />
         <StatCard title="Pending Orders" value={stats.pendingOrders} icon={Clock} color="bg-accent-500" subtext="Requires attention" />
         <StatCard title="Total Products" value={stats.productsCount} icon={Package} color="bg-slate-500" />
-      </div>
-
-      {/* NEW: Sales Chart Section */}
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-primary-500" /> Sales Trend
-          </h2>
-        </div>
-        <div className="h-[300px] w-full">
-          {chartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis 
-                  dataKey="date" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{fill: '#64748b', fontSize: 12}} 
-                  dy={10}
-                />
-                <YAxis 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{fill: '#64748b', fontSize: 12}} 
-                  tickFormatter={(value) => `Rs${value}`}
-                />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  formatter={(value: number) => [`Rs${value.toLocaleString()}`, 'Revenue']}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="sales" 
-                  stroke="#10b981" 
-                  strokeWidth={3}
-                  fillOpacity={1} 
-                  fill="url(#colorSales)" 
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-full flex items-center justify-center text-slate-400">
-              No sales data available yet
-            </div>
-          )}
-        </div>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-8">

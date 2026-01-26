@@ -20,7 +20,6 @@ export default function Header() {
     }
   }, [totalItems]);
 
-  // PWA Install Prompt Listener
   useEffect(() => {
     const handler = (e: any) => {
       e.preventDefault();
