@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast'; 
+import WelcomePopup from './components/WelcomePopup.tsx';
 
 import { CartProvider } from './context/CartContext';
 import { AuthProvider } from './context/AuthContext';
@@ -56,6 +57,7 @@ function App() {
                 },
               }}
             />
+            <WelcomePopup />
             
             <div className="flex flex-col min-h-screen">
               <Routes>

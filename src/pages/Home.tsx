@@ -1,11 +1,22 @@
 import { useEffect, useState } from 'react';
 import { 
-  Sparkles, Filter, Shield, Truck, Leaf, Droplets, RefreshCw, MessageCircle, Star, 
-  Headphones, Watch, Camera, LayoutGrid, Package, ArrowUpDown, ChevronDown, X 
+  Sparkles, Filter, Shield, Truck, MessageCircle, Star, ArrowUpDown 
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { supabase, Product } from '../lib/supabase';
 import ProductCard from '../components/ProductCard';
 import SEO from '../components/SEO';
+
+const FLOAT_IMAGES = [
+  "https://res.cloudinary.com/dztldh7o2/image/upload/v1769461880/8_lgiswx.png", 
+  "https://res.cloudinary.com/dztldh7o2/image/upload/v1769461878/7_rh53s3.png",
+  "https://res.cloudinary.com/dztldh7o2/image/upload/v1769461878/6_ek3cwb.png",
+  "https://res.cloudinary.com/dztldh7o2/image/upload/v1769461877/1_evgktx.png",
+  "https://res.cloudinary.com/dztldh7o2/image/upload/v1769461877/2_gjkqik.png",
+  "https://res.cloudinary.com/dztldh7o2/image/upload/v1769461877/5_p5xx5m.png",
+  "https://res.cloudinary.com/dztldh7o2/image/upload/v1769461877/3_lfjeod.png",
+  "https://res.cloudinary.com/dztldh7o2/image/upload/v1769461877/4_nlecjj.png",
+];
 
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -61,40 +72,97 @@ export default function Home() {
     <div className="min-h-screen bg-slate-50">
       <SEO title="Home" description="Premium eco-friendly cleaning solutions for a safer, sparklier home." />
 
-      {/* HERO SECTION UPDATED:
-        - Reduced pt-32 to pt-24 (mobile) and lg:pt-32 (desktop)
-        - Reduced pb-20 to pb-12 (mobile)
-      */}
-      <div className="relative bg-slate-900 pt-12 pb-12 lg:pt-20 lg:pb-24 overflow-hidden">
-        {/* Background Gradients */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl pointer-events-none">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-primary-500/20 rounded-full blur-3xl mix-blend-screen animate-blob"></div>
-          <div className="absolute top-20 right-10 w-72 h-72 bg-secondary-500/20 rounded-full blur-3xl mix-blend-screen animate-blob animation-delay-2000"></div>
-          <div className="absolute -bottom-32 left-1/2 -translate-x-1/2 w-96 h-96 bg-accent-500/20 rounded-full blur-3xl mix-blend-screen animate-blob animation-delay-4000"></div>
+      {/* --- UPGRADED HERO SECTION --- */}
+      <div className="relative bg-slate-900 pt-24 pb-16 lg:pt-0 lg:pb-12 overflow-hidden">
+        
+        {/* Animated Background Blobs */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <motion.div 
+            animate={{ x: [0, 50, 0], y: [0, -50, 0], scale: [1, 1.2, 1] }}
+            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+            className="absolute -top-20 -left-20 w-96 h-96 bg-primary-500/20 rounded-full blur-[100px]"
+          />
+          <motion.div 
+            animate={{ x: [0, -30, 0], y: [0, 40, 0], scale: [1, 1.1, 1] }}
+            transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+            className="absolute top-1/2 -right-20 w-80 h-80 bg-secondary-500/20 rounded-full blur-[80px]"
+          />
         </div>
 
-        <div className="container mx-auto px-4 relative z-10 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-white/90 text-xs font-bold mb-4 border border-white/10 backdrop-blur-sm animate-fade-in">
+        {/* --- NEW: FLOATING PRODUCT MARQUEE --- */}
+        {/* This fills the space between header and text on mobile */}
+        <div className="absolute top-8 left-0 w-full overflow-hidden z-0 opacity-100 pointer-events-none md:hidden">
+          <div className="relative flex">
+            <motion.div
+              className="flex gap-8 px-4"
+              // We animate x from 0% to -50% assuming the list is duplicated once.
+              animate={{ x: ["0%", "-50%"] }}
+              transition={{ 
+                duration: 20, // Adjust speed (lower = faster)
+                repeat: Infinity, 
+                ease: "linear" 
+              }}
+            >
+              {/* Duplicate the array 4 times to ensure it's long enough to loop smoothly on all screens */}
+              {[...FLOAT_IMAGES, ...FLOAT_IMAGES, ...FLOAT_IMAGES, ...FLOAT_IMAGES].map((img, i) => (
+                <div key={i} className="flex-shrink-0">
+                  <img 
+                    src={img} 
+                    alt="Floating Product" 
+                    className="w-24 h-24 md:w-32 md:h-32 object-contain drop-shadow-[0_10px_10px_rgba(0,0,0,0.3)]"
+                  />
+                </div>
+              ))}
+            </motion.div>
+          </div>
+        </div>
+        {/* --- END MARQUEE --- */}
+
+        <div className="container mx-auto px-4 relative z-10 text-center mt-14 md:mt-12 ">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-white/90 text-xs font-bold mb-6 border border-white/10 backdrop-blur-sm"
+          >
             <Sparkles className="w-3 h-3 text-yellow-400" />
             <span>Premium Cleaning Solutions</span>
-          </div>
+          </motion.div>
           
-          <h1 className="text-3xl md:text-5xl lg:text-6xl font-extrabold text-white tracking-tight mb-4 leading-tight animate-slide-up">
+          <motion.h1 
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-white tracking-tight mb-6 leading-tight"
+          >
             Make Your Home <br className="md:hidden"/>
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-400 via-secondary-400 to-accent-400">Sparkle & Shine</span>
-          </h1>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-400 via-secondary-400 to-accent-400">
+              Sparkle & Shine
+            </span>
+          </motion.h1>
           
-          <p className="text-slate-300 text-sm md:text-lg max-w-2xl mx-auto mb-6 leading-relaxed animate-slide-up-delay">
+          <motion.p 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 0.4 }}
+            className="text-slate-300 text-lg md:text-xl max-w-2xl mx-auto mb-8 leading-relaxed"
+          >
             Powerful, eco-friendly formulas designed to tackle the toughest stains while keeping your family safe.
-          </p>
+          </motion.p>
 
-          <div className="flex flex-wrap justify-center gap-3 text-xs md:text-sm font-medium text-slate-300 animate-slide-up-delay-2">
-            <div className="flex items-center gap-1.5 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5"><Shield className="w-4 h-4 text-primary-400" /> Safe for Kids</div>
-            <div className="flex items-center gap-1.5 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5"><Leaf className="w-4 h-4 text-green-400" /> Eco-Friendly</div>
-            <div className="flex items-center gap-1.5 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5"><RefreshCw className="w-4 h-4 text-blue-400" /> Fast Acting</div>
-          </div>
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.6 }}
+            className="flex justify-center gap-4"
+          >
+            <a href="#products" className="bg-primary-600 text-white px-8 py-2 rounded-xl font-bold hover:bg-primary-500 transition-all shadow-lg shadow-primary-500/25 hover:scale-105 active:scale-95">
+              Shop Now
+            </a>
+          </motion.div>
         </div>
       </div>
+      {/* --- END UPGRADED HERO SECTION --- */}
 
       {/* Main Content Area */}
       <div id="products" className="container mx-auto px-4 -mt-6 relative z-20 scroll-mt-24">
