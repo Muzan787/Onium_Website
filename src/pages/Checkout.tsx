@@ -136,6 +136,7 @@ export default function Checkout() {
       toast.error('Please fill in all required fields.');
     }
   };
+// ... imports
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,9 +144,14 @@ export default function Checkout() {
     setIsProcessing(true);
 
     try {
+      // 1. Generate the Order ID here (Client Side) instead of asking the DB
+      // This bypasses the need for "SELECT" permission
+      const newOrderId = crypto.randomUUID(); 
+
       const orderData = {
+        id: newOrderId, // <--- Manual ID
         customer_name: formData.name,
-        customer_email: formData.email, // This is now the authenticated email if logged in
+        customer_email: formData.email,
         customer_phone: formData.phone,
         customer_address: `${formData.address}, ${formData.city}`,
         special_instructions: formData.instructions + (isCouponApplied ? ` [Coupon Applied: ${couponCode.toUpperCase()}]` : ''),
@@ -154,18 +160,19 @@ export default function Checkout() {
         total_price: total,
         status: 'pending',
         payment_method: paymentMethod,
-        // Optional: Save user_id if you have a column for it
-        // user_id: user?.id 
+        // user_id: user?.id // Uncomment if you add user_id to your table later
       };
 
-      const { data: orderDataResp, error: orderError } = await supabase.from('orders').insert(orderData).select().single();
+      // 2. Remove .select() to prevent the 401 Error
+      const { error: orderError } = await supabase.from('orders').insert(orderData);
+      
       if (orderError) throw orderError;
 
       const orderItems = cartItems.map((item) => ({
-        order_id: orderDataResp.id,
+        order_id: newOrderId, // <--- Use the ID we generated above
         product_id: item.id,
         product_title: item.title,
-        product_image: item.image_url,
+        // product_image: item.image_url, <--- REMOVED: This column does not exist in your SQL schema
         quantity: item.quantity,
         price_at_purchase: item.price,
       }));
@@ -173,14 +180,15 @@ export default function Checkout() {
       const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
       if (itemsError) throw itemsError;
 
+      // 3. Success!
       setSavedOrderTotal(total);
-      setOrderId(orderDataResp.id);
+      setOrderId(newOrderId);
       setOrderComplete(true);
       clearCart();
       toast.success('Order placed successfully!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error placing order:', error);
-      toast.error('Failed to place order.');
+      toast.error('Failed to place order: ' + (error.message || 'Unknown error'));
     } finally {
       setIsProcessing(false);
     }

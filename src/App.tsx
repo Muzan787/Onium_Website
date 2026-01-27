@@ -3,13 +3,16 @@ import { Toaster } from 'react-hot-toast';
 import WelcomePopup from './components/WelcomePopup.tsx';
 
 import { CartProvider } from './context/CartContext';
-import { AuthProvider } from './context/AuthContext'; // Keep this if you plan to add Customer Login later
+import { AuthProvider } from './context/AuthContext';
 
 import Header from './components/Header';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
 
 import Home from './pages/Home';
+import Login from './pages/Login';
+import ForgotPassword from './pages/ForgotPassword';
+import UpdatePassword from './pages/UpdatePassword';
 import ProductDetail from './pages/ProductDetail';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
@@ -25,11 +28,6 @@ function App() {
   return (
     <BrowserRouter>
       <ScrollToTop /> 
-      
-      {/* Keep AuthProvider if you want Customer Login features. 
-         If your store is Guest Checkout only, you can remove <AuthProvider> wrapper 
-         and delete src/context/AuthContext.tsx to save more space.
-      */}
       <AuthProvider>
         <CartProvider>
             <Toaster 
@@ -58,6 +56,9 @@ function App() {
                 <main className="flex-grow">
                   <Routes>
                     <Route path="/" element={<Home />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/update-password" element={<UpdatePassword />} />
                     <Route path="/product/:slug" element={<ProductDetail />} />
                     <Route path="/cart" element={<Cart />} />
                     <Route path="/checkout" element={<Checkout />} />
@@ -68,7 +69,6 @@ function App() {
                     <Route path="/shipping-policy" element={<ShippingPolicy />} />
                     <Route path="/return-policy" element={<ReturnPolicy />} />
                     <Route path="/track-order" element={<TrackOrder />} />
-                    {/* 404 - Redirect unknown routes to Home */}
                     <Route path="*" element={<Home />} />
                   </Routes>
                 </main>
