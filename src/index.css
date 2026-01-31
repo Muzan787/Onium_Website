@@ -17,30 +17,37 @@ html {
     @apply bg-slate-50 text-slate-900;
   }
 
-  /* --- NUCLEAR FIX START --- */
+/* --- NUCLEAR FIX START --- */
   
-  /* 1. Force the prose container itself to never overflow the screen */
+  /* 1. Force the prose container itself to never overflow */
   .prose {
     max-width: 100% !important;
-    overflow-wrap: break-word; /* Prevents long text from widening the container */
+    overflow-wrap: break-word;
+    word-break: break-word;
   }
 
-  /* 2. Force ALL elements inside the description to respect the screen width */
-  .prose > * {
+  /* 2. KEY CHANGE: Target ALL descendants (removed the '>') */
+  .prose * {
     max-width: 100% !important;
+    box-sizing: border-box !important;
   }
 
-  /* 3. Aggressively constrain images and their wrappers */
+  /* 3. Handle Tables (common cause of page blowout) */
+  .prose table {
+    display: block;
+    width: 100% !important;
+    overflow-x: auto;
+  }
+
+  /* 4. Aggressively constrain media */
   .prose img,
   .prose video,
   .prose iframe,
   .prose figure {
-    max-width: 100% !important;  /* Never wider than screen */
-    width: auto !important;      /* Reset any fixed width (like 1547px) */
-    height: auto !important;     /* Maintain aspect ratio */
+    width: auto !important; /* Resets fixed widths like 1000px */
+    height: auto !important;
     display: block;
     margin: 1rem auto;
-    box-sizing: border-box !important;
   }
   
   /* --- NUCLEAR FIX END --- */

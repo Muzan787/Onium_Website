@@ -185,7 +185,7 @@ export default function ProductDetail() {
           </div>
 
           {/* Details Section */}
-          <div className="space-y-6">
+          <div className="space-y-6 min-w-0">
             <div className="flex items-center justify-between">
               <span className="inline-block bg-secondary-50 text-secondary-700 px-3 py-1 rounded-full text-sm font-bold capitalize tracking-wide">{product.category}</span>
               <div className="flex items-center gap-1"><Star className="w-4 h-4 text-accent-400 fill-current" /><span className="text-sm text-slate-600 font-medium">({reviewsCount > 0 ? averageRating : 'New'})</span></div>
