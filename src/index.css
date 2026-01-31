@@ -18,6 +18,13 @@ html {
   body {
     @apply bg-slate-50 text-slate-900;
   }
+
+  /* FIX: Ensure images in description don't overflow */
+  .prose img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+  }
 }
 
 @layer utilities {

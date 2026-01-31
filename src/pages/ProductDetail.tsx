@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import toast from 'react-hot-toast'; // Ensure toast is imported
+import toast from 'react-hot-toast';
 import { ArrowLeft, ShoppingCart, Minus, Plus, Shield, Truck, RefreshCw, Star, Package, Droplets, Leaf, Check, Share2, CheckCircle, X, Maximize2 } from 'lucide-react';
 import { supabase, Product, Review } from '../lib/supabase';
 import { useCart } from '../context/CartContext';
-import ProductCard from '../components/ProductCard';
 import SEO from '../components/SEO';
 
 export default function ProductDetail() {
@@ -15,58 +14,35 @@ export default function ProductDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
-  const [isWishlisted, setIsWishlisted] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [showLightbox, setShowLightbox] = useState(false);
   
-  const hasDiscount = product?.discount && product?.discount > 0;
-  const finalPrice = product ? (hasDiscount ? product.price * (1 - product.discount! / 100) : product.price) : 0;
-
-  // ... (Review states remain unchanged)
+  // Review states
   const [productReviews, setProductReviews] = useState<Review[]>([]);
   const [reviewForm, setReviewForm] = useState({ name: '', rating: 5, comment: '' });
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [reviewMessage, setReviewMessage] = useState('');
   const [reviewFile, setReviewFile] = useState<File | null>(null);
+
+  const hasDiscount = product?.discount && product?.discount > 0;
+  const finalPrice = product ? (hasDiscount ? product.price * (1 - product.discount! / 100) : product.price) : 0;
+  
   const reviewsCount = productReviews.length;
   const averageRating = reviewsCount > 0 
     ? (productReviews.reduce((acc, rev) => acc + rev.rating, 0) / reviewsCount).toFixed(1)
     : 0;
 
   useEffect(() => {
-    if (slug) { // Check for slug
-      fetchProduct();
-      // Don't call fetchProductReviews here anymore, it's called inside fetchProduct
-    }
+    if (slug) fetchProduct();
   }, [slug]);
 
-  // NEW: Handle Share Functionality
   const handleShare = async () => {
     if (!product) return;
-
-    const shareData = {
-      title: product.title,
-      text: `Check out ${product.title} on Onium Store!`,
-      url: window.location.href,
-    };
-
-    // Check if Web Share API is supported (Mobile mostly)
+    const shareData = { title: product.title, text: `Check out ${product.title}!`, url: window.location.href };
     if (navigator.share) {
-      try {
-        await navigator.share(shareData);
-        toast.success('Shared successfully!');
-      } catch (err) {
-        // User cancelled or error, usually ignore unless debugging
-        console.log('Error sharing', err);
-      }
+      try { await navigator.share(shareData); toast.success('Shared!'); } catch (err) {}
     } else {
-      // Fallback for Desktop: Copy to Clipboard
-      try {
-        await navigator.clipboard.writeText(window.location.href);
-        toast.success('Link copied to clipboard!');
-      } catch (err) {
-        toast.error('Failed to copy link.');
-      }
+      try { await navigator.clipboard.writeText(window.location.href); toast.success('Copied to clipboard'); } catch (err) {}
     }
   };
 
@@ -89,7 +65,6 @@ export default function ProductDetail() {
           .eq('category', productData.category)
           .neq('id', productData.id)
           .limit(4);
-
         setRelatedProducts(relatedData || []);
       }
     } catch (error) {
@@ -100,30 +75,21 @@ export default function ProductDetail() {
   };
 
   const fetchProductReviews = async (productId: string) => {
-    // ... (unchanged)
-    const { data } = await supabase
-      .from('reviews')
-      .select('*')
-      .eq('product_id', productId)
-      .eq('is_approved', true)
-      .order('created_at', { ascending: false });
+    const { data } = await supabase.from('reviews').select('*').eq('product_id', productId).eq('is_approved', true).order('created_at', { ascending: false });
     setProductReviews(data || []);
   };
 
   const handleAddToCart = () => {
-    // ... (unchanged)
     if (product) {
       setIsAdding(true);
-      for (let i = 0; i < quantity; i++) {
-        addToCart(product);
-      }
+      for (let i = 0; i < quantity; i++) addToCart(product);
       setTimeout(() => setIsAdding(false), 1000);
     }
   };
 
   const handleReviewSubmit = async (e: React.FormEvent) => {
-    // ... (unchanged)
     e.preventDefault();
+    if(!product) return;
     setIsSubmittingReview(true);
     let uploadedImageUrl = "";
 
@@ -143,11 +109,11 @@ export default function ProductDetail() {
       rating: reviewForm.rating,
       comment: reviewForm.comment,
       image_url: uploadedImageUrl || null,
-      product_id: id
+      product_id: product.id
     }]);
 
     if (!error) {
-      setReviewMessage('🎉 Review submitted! It will appear once approved.');
+      setReviewMessage('🎉 Review submitted! Awaiting approval.');
       setReviewForm({ name: '', rating: 5, comment: '' });
       setReviewFile(null);
       setTimeout(() => setReviewMessage(''), 5000);
@@ -164,7 +130,7 @@ export default function ProductDetail() {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-32">
-      <SEO title={product.title} description={product.description} image={product.image_url} url={`https://onium.store/product/${product.id}`} />
+      <SEO title={product.title} description={product.description?.substring(0, 150)} image={product.image_url} url={`https://onium.store/product/${product.id}`} />
       
       {/* Lightbox */}
       {showLightbox && (
@@ -176,42 +142,37 @@ export default function ProductDetail() {
         </div>
       )}
 
-      {/* Floating WhatsApp */}
+      {/* WhatsApp Floating */}
       <a href={`https://wa.me/923231550147?text=I'm%20interested%20in%20${encodeURIComponent(product.title)}`} target="_blank" rel="noopener noreferrer" className="fixed bottom-24 right-6 z-40 bg-gradient-to-r from-primary-600 to-primary-500 text-white p-3 rounded-full shadow-2xl hover:scale-110 transition-all">
-        <div className="relative">
-          <span className="absolute -top-10 -left-20 bg-white text-primary-700 text-sm font-bold px-3 py-1 rounded-lg opacity-0 hover:opacity-100 transition-opacity">Ask on WhatsApp</span>
-          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004c-1.831 0-3.505-.655-4.812-1.741l-4.812 1.741 1.321-4.631c-1.102-1.904-1.74-4.076-1.74-6.399 0-6.214 5.058-11.272 11.272-11.272 3.014 0 5.847 1.174 7.977 3.304 2.13 2.131 3.304 4.964 3.304 7.977 0 6.214-5.058 11.272-11.272 11.272"/></svg>
-        </div>
+        {/* SVG Icon from your file... */}
+        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004c-1.831 0-3.505-.655-4.812-1.741l-4.812 1.741 1.321-4.631c-1.102-1.904-1.74-4.076-1.74-6.399 0-6.214 5.058-11.272 11.272-11.272 3.014 0 5.847 1.174 7.977 3.304 2.13 2.131 3.304 4.964 3.304 7.977 0 6.214-5.058 11.272-11.272 11.272"/></svg>
       </a>
 
       <div className="container mx-auto px-4 py-8">
+        {/* ... Nav ... */}
         <nav className="flex items-center gap-2 text-sm text-slate-500 mb-8 font-medium">
           <Link to="/" className="hover:text-primary-600 transition-colors">Home</Link>
           <span className="text-slate-300">/</span>
           <Link to="/products" className="hover:text-primary-600 transition-colors">Products</Link>
           <span className="text-slate-300">/</span>
-          <Link to={`/products?category=${product.category}`} className="hover:text-primary-600 transition-colors capitalize">{product.category}</Link>
+          <span className="capitalize">{product.category}</span>
         </nav>
 
         <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
-          {/* Images */}
+          {/* Images Section */}
           <div className="space-y-4">
             <div className="relative aspect-square bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200 group cursor-zoom-in" onClick={() => setShowLightbox(true)}>
-              <img src={productImages[selectedImage] || product.image_url} alt={product.title} className="w-full h-full object-contain p-8 transition-transform duration-500 group-hover:scale-105" />
+              {/* UPDATED: Decreased padding from p-8 to p-4 on mobile for better visibility */}
+              <img 
+                src={productImages[selectedImage] || product.image_url} 
+                alt={product.title} 
+                className="w-full h-full object-contain p-4 md:p-8 transition-transform duration-500 group-hover:scale-105" 
+              />
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/20 text-white p-3 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><Maximize2 className="w-8 h-8" /></div>
-              
-              {/* Action Buttons: Wishlist & Share */}
               <div className="absolute top-4 right-4 flex gap-2" onClick={(e) => e.stopPropagation()}>
-                {/* SHARE BUTTON: Now triggers handleShare */}
-                <button 
-                  onClick={handleShare}
-                  className="p-2.5 bg-white backdrop-blur-sm rounded-full shadow-lg text-slate-700 hover:bg-slate-50 transition-colors active:scale-95"
-                >
-                  <Share2 className="w-5 h-5" />
-                </button>
+                <button onClick={handleShare} className="p-2.5 bg-white backdrop-blur-sm rounded-full shadow-lg text-slate-700 hover:bg-slate-50 transition-colors active:scale-95"><Share2 className="w-5 h-5" /></button>
               </div>
             </div>
-            
             {productImages.length > 1 && (
               <div className="flex gap-3 overflow-x-auto pb-2">
                 {productImages.map((img, index) => (
@@ -223,42 +184,30 @@ export default function ProductDetail() {
             )}
           </div>
 
-          {/* Details */}
+          {/* Details Section */}
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <span className="inline-block bg-secondary-50 text-secondary-700 px-3 py-1 rounded-full text-sm font-bold capitalize tracking-wide">{product.category}</span>
-              <div className="flex items-center gap-1">
-                <Star className="w-4 h-4 text-accent-400 fill-current" />
-                <span className="text-sm text-slate-600 font-medium">({reviewsCount > 0 ? averageRating : 'New'})</span>
-              </div>
+              <div className="flex items-center gap-1"><Star className="w-4 h-4 text-accent-400 fill-current" /><span className="text-sm text-slate-600 font-medium">({reviewsCount > 0 ? averageRating : 'New'})</span></div>
             </div>
 
             <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-slate-900 leading-tight">{product.title}</h1>
-            <p className="text-slate-600 text-base md:text-lg leading-relaxed">{product.description}</p>
+            
+            {/* Description Area (constrained by .prose) */}
+            <div 
+              className="text-slate-600 text-base md:text-lg leading-relaxed prose prose-slate max-w-none"
+              dangerouslySetInnerHTML={{ __html: product.description || '' }}
+            />
 
             <div className="bg-primary-50/50 p-6 rounded-3xl border border-primary-100">
-              <div className="mb-6">
+               {/* Pricing and Cart Logic (Same as before) */}
+               <div className="mb-6">
                 <div className="flex items-baseline gap-3">
-                  <span className="text-3xl md:text-5xl font-bold text-slate-900">
-                    Rs{finalPrice.toFixed(2)}
-                  </span>
-                  {hasDiscount && (
-                    <>
-                      <span className="text-lg text-slate-400 line-through font-medium">
-                        Rs{product.price.toFixed(2)}
-                      </span>
-                      <span className="bg-red-100 text-red-700 px-2 py-1 rounded-lg text-sm font-bold">
-                        -{product.discount}%
-                      </span>
-                    </>
-                  )}
+                  <span className="text-3xl md:text-5xl font-bold text-slate-900">Rs{finalPrice.toFixed(2)}</span>
+                  {hasDiscount && <><span className="text-lg text-slate-400 line-through font-medium">Rs{product.price.toFixed(2)}</span><span className="bg-red-100 text-red-700 px-2 py-1 rounded-lg text-sm font-bold">-{product.discount}%</span></>}
                 </div>
-                <span className="text-sm text-slate-500 font-medium block mt-1">
-                  per {product.unit || 'item'}
-                </span>
-                {product.stock > 0 && <div className="mt-2 text-primary-700 font-semibold flex items-center gap-2 text-sm"><div className="w-2 h-2 bg-primary-500 rounded-full animate-pulse"></div>In Stock & Ready to Ship</div>}
+                <span className="text-sm text-slate-500 font-medium block mt-1">per {product.unit || 'item'}</span>
               </div>
-
               <div className="hidden md:block space-y-4">
                 <div className="flex items-center gap-4">
                   <label className="font-bold text-slate-700">Qty:</label>
@@ -339,19 +288,19 @@ export default function ProductDetail() {
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Mobile Sticky Bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-50">
-        <div className="flex gap-4 items-center">
-          <div className="flex items-center border border-slate-300 rounded-xl overflow-hidden bg-slate-50 h-12">
-            <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="px-3 hover:bg-slate-100 text-slate-600"><Minus className="w-4 h-4" /></button>
-            <span className="px-3 font-bold text-slate-900 min-w-[30px] text-center">{quantity}</span>
-            <button onClick={() => setQuantity(quantity + 1)} className="px-3 hover:bg-slate-100 text-slate-600"><Plus className="w-4 h-4" /></button>
+        
+        {/* Mobile Sticky Bar */}
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-50">
+          <div className="flex gap-4 items-center">
+            <div className="flex items-center border border-slate-300 rounded-xl overflow-hidden bg-slate-50 h-12">
+              <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="px-3 hover:bg-slate-100 text-slate-600"><Minus className="w-4 h-4" /></button>
+              <span className="px-3 font-bold text-slate-900 min-w-[30px] text-center">{quantity}</span>
+              <button onClick={() => setQuantity(quantity + 1)} className="px-3 hover:bg-slate-100 text-slate-600"><Plus className="w-4 h-4" /></button>
+            </div>
+            <button onClick={handleAddToCart} disabled={product.stock === 0 || isAdding} className={`flex-1 text-white h-12 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all ${isAdding ? 'bg-primary-500' : 'bg-primary-600'}`}>
+              {isAdding ? <><CheckCircle className="w-5 h-5 animate-bounce" /> Added!</> : <><ShoppingCart className="w-5 h-5" /> Add to Cart</>}
+            </button>
           </div>
-          <button onClick={handleAddToCart} disabled={product.stock === 0 || isAdding} className={`flex-1 text-white h-12 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all ${isAdding ? 'bg-primary-500' : 'bg-primary-600'}`}>
-            {isAdding ? <><CheckCircle className="w-5 h-5 animate-bounce" /> Added!</> : <><ShoppingCart className="w-5 h-5" /> Add to Cart</>}
-          </button>
         </div>
       </div>
     </div>
