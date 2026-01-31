@@ -75,6 +75,17 @@ export default function Home() {
       {/* --- UPGRADED HERO SECTION --- */}
       <div className="relative bg-slate-900 pt-24 pb-16 lg:pt-0 lg:pb-12 overflow-hidden">
         
+        {/* Background Image: Blurred & Blended */}
+        <div className="absolute inset-0 z-0">
+          <img 
+            src="https://res.cloudinary.com/dztldh7o2/image/upload/v1769680547/ONIUM_owkhtd.png"
+            alt="Hero Background"
+            className="w-full h-full object-cover blur-[3px] opacity-30"
+          />
+          {/* Overlay to ensure seamless blending with slate background */}
+          <div className="absolute inset-0 bg-slate-900/40 mix-blend-multiply"></div>
+        </div>
+
         {/* Animated Background Blobs */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <motion.div 
@@ -276,7 +287,7 @@ export default function Home() {
 
       {/* Floating WhatsApp Button */}
       <a
-        href="https://wa.me/923231550147?text=Hi%2C%20I%20want%20to%20order..."
+        href="https://wa.me/923231550147?text=Asalamo%20Alikum%2C%20I%20want%20to%20order..."
         target="_blank"
         rel="noopener noreferrer"
         className="fixed bottom-24 right-6 z-40 bg-[#25D366] text-white p-3.5 rounded-full shadow-xl hover:scale-110 transition-transform duration-300 flex items-center justify-center"

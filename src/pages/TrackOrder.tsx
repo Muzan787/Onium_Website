@@ -116,9 +116,9 @@ export default function TrackOrder() {
               </div>
             </div>
 
-            {/* WhatsApp Support Button */}
+
             <a 
-              href={`https://wa.me/923231550147?text=Hello%2C%20I%20have%20a%20query%20about%20my%20order%20%23${orderStatus.id.slice(0,8).toUpperCase()}`} 
+              href={`https://wa.me/923231550147?text=Asalamo%20Alikum%2C%20I%20have%20a%20query%20about%20my%20order%20%23${orderStatus.id.slice(0,8).toUpperCase()}`} 
               target="_blank" 
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 w-full bg-green-500 text-white py-3 rounded-xl font-bold hover:bg-green-600 transition-colors shadow-lg"
