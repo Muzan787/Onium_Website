@@ -195,7 +195,7 @@ export default function ProductDetail() {
             
             {/* Description Area (constrained by .prose) */}
             <div 
-              className="text-slate-600 text-base md:text-lg leading-relaxed prose prose-slate max-w-none"
+              className="text-slate-600 text-base md:text-lg leading-relaxed prose prose-slate max-w-none w-full overflow-hidden"
               dangerouslySetInnerHTML={{ __html: product.description || '' }}
             />
 

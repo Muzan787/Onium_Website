@@ -7,24 +7,43 @@ html {
 }
 
 @layer base {
-  /* Apply the new font family globally */
   html {
     font-family: 'Plus Jakarta Sans', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
   
-  /* Set a softer default background color */
   body {
     @apply bg-slate-50 text-slate-900;
   }
 
-  /* FIX: Ensure images in description don't overflow */
-  .prose img {
-    max-width: 100%;
-    height: auto;
-    border-radius: 0.5rem;
+  /* --- NUCLEAR FIX START --- */
+  
+  /* 1. Force the prose container itself to never overflow the screen */
+  .prose {
+    max-width: 100% !important;
+    overflow-wrap: break-word; /* Prevents long text from widening the container */
   }
+
+  /* 2. Force ALL elements inside the description to respect the screen width */
+  .prose > * {
+    max-width: 100% !important;
+  }
+
+  /* 3. Aggressively constrain images and their wrappers */
+  .prose img,
+  .prose video,
+  .prose iframe,
+  .prose figure {
+    max-width: 100% !important;  /* Never wider than screen */
+    width: auto !important;      /* Reset any fixed width (like 1547px) */
+    height: auto !important;     /* Maintain aspect ratio */
+    display: block;
+    margin: 1rem auto;
+    box-sizing: border-box !important;
+  }
+  
+  /* --- NUCLEAR FIX END --- */
 }
 
 @layer utilities {
