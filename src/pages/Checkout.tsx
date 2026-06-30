@@ -32,7 +32,7 @@ export default function Checkout() {
   const [isCouponApplied, setIsCouponApplied] = useState(false);
   const [isCheckingCoupon, setIsCheckingCoupon] = useState(false);
 
-  const SHIPPING_THRESHOLD = 2000;
+  const SHIPPING_THRESHOLD = 3000;
   const SHIPPING_CHARGE = 200;
   const subtotal = getTotalPrice();
 

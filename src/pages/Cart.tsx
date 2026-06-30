@@ -6,7 +6,7 @@ export default function Cart() {
   const { cartItems, updateQuantity, removeFromCart, getTotalPrice, clearCart } = useCart();
   const navigate = useNavigate();
 
-  const shippingThreshold = 2000;
+  const shippingThreshold = 3000;
   const freeShipping = getTotalPrice() >= shippingThreshold;
   const remainingForFreeShipping = shippingThreshold - getTotalPrice();
   const whatsappMessage = encodeURIComponent(`I want to purchase following items:\n${cartItems.map(item => `• ${item.title}`).join('\n')}`);
@@ -107,9 +107,9 @@ export default function Cart() {
               <h2 className="text-xl font-bold text-slate-900 mb-6">Order Summary</h2>
               <div className="space-y-3 mb-6 border-b border-slate-100 pb-6">
                 <div className="flex justify-between text-slate-600"><span>Subtotal</span><span className="font-bold text-slate-900">Rs{getTotalPrice().toFixed(2)}</span></div>
-                <div className="flex justify-between text-slate-600"><span>Delivery</span><span className={freeShipping ? 'text-primary-600 font-bold' : 'text-slate-900 font-bold'}>{freeShipping ? 'FREE' : 'Rs100'}</span></div>
+                <div className="flex justify-between text-slate-600"><span>Delivery</span><span className={freeShipping ? 'text-primary-600 font-bold' : 'text-slate-900 font-bold'}>{freeShipping ? 'FREE' : 'Rs200'}</span></div>
               </div>
-              <div className="flex justify-between text-lg font-bold text-slate-900 mb-6"><span>Total</span><span>Rs{(freeShipping ? getTotalPrice() : getTotalPrice() + 100).toFixed(2)}</span></div>
+              <div className="flex justify-between text-lg font-bold text-slate-900 mb-6"><span>Total</span><span>Rs{(freeShipping ? getTotalPrice() : getTotalPrice() + 200).toFixed(2)}</span></div>
               <button onClick={() => navigate('/checkout')} className="w-full bg-primary-600 text-white py-3.5 rounded-xl font-bold hover:bg-primary-700 transition-colors shadow-lg shadow-primary-900/10 flex items-center justify-center gap-2"><CreditCard className="w-5 h-5"/> Proceed to Checkout</button>
             </div>
           </div>
