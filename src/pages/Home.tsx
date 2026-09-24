@@ -197,7 +197,7 @@ export default function Home() {
             <div className="p-2 bg-green-50 rounded-lg"><Truck className="w-5 h-5 text-green-500" /></div>
             <div>
               <p className="font-bold text-slate-900 text-sm">Free Shipping</p>
-              <p className="text-xs text-slate-500">On orders over Rs2000</p>
+              <p className="text-xs text-slate-500">On orders over Rs3000</p>
             </div>
           </div>
 

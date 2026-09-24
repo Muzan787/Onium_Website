@@ -59,7 +59,7 @@ export default function Header() {
         <div className="container mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles className="w-3 h-3 md:w-4 md:h-4 animate-pulse text-accent-300" />
-            <span className="font-medium">✨ Free Delivery on Orders Above Rs2,000</span>
+            <span className="font-medium">✨ Free Delivery on Orders Above Rs3,000</span>
           </div>
           <a href="https://wa.me/923231550147" target="_blank" rel="noopener noreferrer" className="hidden md:flex items-center gap-2 bg-white/20 hover:bg-white/30 px-3 py-1 rounded-full transition-colors">
             <Phone className="w-3 h-3" />

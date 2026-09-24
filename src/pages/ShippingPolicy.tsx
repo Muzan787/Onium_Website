@@ -68,11 +68,11 @@ export default function ShippingPolicy() {
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
                     <h4 className="font-bold text-slate-900 mb-1">Standard Rate</h4>
-                    <p className="text-slate-500 text-sm">Rs 200 flat rate for all orders under Rs 2,000.</p>
+                    <p className="text-slate-500 text-sm">Rs 200 flat rate for all orders under Rs 3,000.</p>
                   </div>
                   <div className="p-4 bg-primary-50 rounded-xl border border-primary-100">
                     <h4 className="font-bold text-primary-700 mb-1">Free Shipping</h4>
-                    <p className="text-primary-600 text-sm">Free delivery for all orders above Rs 2,000.</p>
+                    <p className="text-primary-600 text-sm">Free delivery for all orders above Rs 3,000.</p>
                   </div>
                 </div>
               </section>
