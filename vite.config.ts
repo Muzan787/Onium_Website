@@ -9,6 +9,11 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate', // Updates the app automatically
       includeAssets: ['favicon.png', 'robots.txt', 'apple-touch-icon.png'],
+      workbox: {
+        // Keep the admin panel off the offline shell: it should always load
+        // fresh from the network rather than out of the PWA cache.
+        navigateFallbackDenylist: [/^\/admin/],
+      },
       manifest: {
         name: 'Onium Store',
         short_name: 'Onium',

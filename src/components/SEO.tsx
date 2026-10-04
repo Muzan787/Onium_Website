@@ -5,9 +5,10 @@ interface SEOProps {
   description?: string;
   image?: string;
   url?: string;
+  noIndex?: boolean;
 }
 
-export default function SEO({ title, description, image, url }: SEOProps) {
+export default function SEO({ title, description, image, url, noIndex }: SEOProps) {
   const siteTitle = 'Onium Store';
   const defaultDescription = 'Premium eco-friendly cleaning solutions for a safer, sparklier home.';
   const siteUrl = 'https://onium.store';
@@ -18,6 +19,7 @@ export default function SEO({ title, description, image, url }: SEOProps) {
       {/* Standard Metadata */}
       <title>{`${title} | ${siteTitle}`}</title>
       <meta name="description" content={description || defaultDescription} />
+      {noIndex && <meta name="robots" content="noindex, nofollow" />}
 
       {/* Open Graph / Facebook */}
       <meta property="og:type" content="website" />

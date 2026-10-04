@@ -1,13 +1,12 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast'; 
-import WelcomePopup from './components/WelcomePopup.tsx';
+import { Toaster } from 'react-hot-toast';
 
 import { CartProvider } from './context/CartContext';
 import { AuthProvider } from './context/AuthContext';
 
-import Header from './components/Header';
-import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
+import StorefrontLayout from './components/StorefrontLayout';
 
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -19,61 +18,78 @@ import Checkout from './pages/Checkout';
 import Reviews from './pages/Reviews';
 import About from './pages/About';
 import TrackOrder from './pages/TrackOrder';
-import FAQ from './pages/FAQ'; 
-import Contact from './pages/Contact'; 
+import FAQ from './pages/FAQ';
+import Contact from './pages/Contact';
 import ShippingPolicy from './pages/ShippingPolicy';
 import ReturnPolicy from './pages/ReturnPolicy';
+
+// Loaded on demand so the admin panel never weighs down the storefront bundle
+const AdminRoutes = lazy(() => import('./pages/admin/AdminRoutes'));
+
+function AdminFallback() {
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900" />
+    </div>
+  );
+}
 
 function App() {
   return (
     <BrowserRouter>
-      <ScrollToTop /> 
+      <ScrollToTop />
       <AuthProvider>
         <CartProvider>
-            <Toaster 
-              position="top-center" 
-              toastOptions={{
-                duration: 3000,
-                style: {
-                  background: '#333',
-                  color: '#fff',
-                  borderRadius: '10px',
-                },
-                success: {
-                  style: { background: '#10b981' },
-                  iconTheme: { primary: '#fff', secondary: '#10b981' },
-                },
-                error: {
-                  style: { background: '#ef4444' },
-                  iconTheme: { primary: '#fff', secondary: '#ef4444' },
-                },
-              }}
+          <Toaster
+            position="top-center"
+            toastOptions={{
+              duration: 3000,
+              style: {
+                background: '#333',
+                color: '#fff',
+                borderRadius: '10px',
+              },
+              success: {
+                style: { background: '#10b981' },
+                iconTheme: { primary: '#fff', secondary: '#10b981' },
+              },
+              error: {
+                style: { background: '#ef4444' },
+                iconTheme: { primary: '#fff', secondary: '#ef4444' },
+              },
+            }}
+          />
+
+          <Routes>
+            {/* --- Admin panel --- */}
+            <Route
+              path="/admin/*"
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <AdminRoutes />
+                </Suspense>
+              }
             />
-            <WelcomePopup />
-            
-            <div className="flex flex-col min-h-screen">
-                <Header />
-                <main className="flex-grow">
-                  <Routes>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/forgot-password" element={<ForgotPassword />} />
-                    <Route path="/update-password" element={<UpdatePassword />} />
-                    <Route path="/product/:slug" element={<ProductDetail />} />
-                    <Route path="/cart" element={<Cart />} />
-                    <Route path="/checkout" element={<Checkout />} />
-                    <Route path="/reviews" element={<Reviews />} />
-                    <Route path="/about" element={<About />} />
-                    <Route path="/faq" element={<FAQ />} />
-                    <Route path="/contact" element={<Contact />} /> 
-                    <Route path="/shipping-policy" element={<ShippingPolicy />} />
-                    <Route path="/return-policy" element={<ReturnPolicy />} />
-                    <Route path="/track-order" element={<TrackOrder />} />
-                    <Route path="*" element={<Home />} />
-                  </Routes>
-                </main>
-                <Footer />
-            </div>
+
+            {/* --- Storefront --- */}
+            <Route element={<StorefrontLayout />}>
+              <Route path="/" element={<Home />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/update-password" element={<UpdatePassword />} />
+              <Route path="/product/:slug" element={<ProductDetail />} />
+              <Route path="/cart" element={<Cart />} />
+              <Route path="/checkout" element={<Checkout />} />
+              <Route path="/reviews" element={<Reviews />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/faq" element={<FAQ />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/shipping-policy" element={<ShippingPolicy />} />
+              <Route path="/return-policy" element={<ReturnPolicy />} />
+              <Route path="/track-order" element={<TrackOrder />} />
+              <Route path="*" element={<Home />} />
+            </Route>
+          </Routes>
         </CartProvider>
       </AuthProvider>
     </BrowserRouter>
