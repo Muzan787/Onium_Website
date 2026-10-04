@@ -75,26 +75,29 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      // 1. Check the whitelist first, so a non-admin's storefront session is
-      // never replaced by a failed admin login attempt.
-      const { data: adminData, error: adminError } = await supabase
-        .from('admins')
-        .select('id, email')
-        .eq('email', email)
-        .maybeSingle();
-
-      if (adminError || !adminData) {
-        return { error: 'Not an authorized admin' };
-      }
-
-      // 2. Authenticate with Supabase Auth (Secure)
-      const { error: authError } = await supabase.auth.signInWithPassword({
+      // 1. Authenticate with Supabase Auth (Secure)
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (authError) {
         return { error: authError.message };
+      }
+
+      // 2. Check the 'admins' whitelist. This runs as the freshly signed-in
+      // user rather than anonymously, so it keeps working if the 'admins'
+      // table is later locked down to authenticated reads only.
+      const { data: adminData, error: adminError } = await supabase
+        .from('admins')
+        .select('id, email')
+        .eq('email', authData.user?.email ?? email)
+        .maybeSingle();
+
+      if (adminError || !adminData) {
+        // Signed in, but not on the whitelist -> drop the session again.
+        await supabase.auth.signOut();
+        return { error: 'Not an authorized admin' };
       }
 
       // Success: The onAuthStateChange listener above will update the state
