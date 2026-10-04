@@ -225,8 +225,41 @@ export default function AdminProducts() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      {/* Mobile: card list (a 5-column table is unusable at phone width) */}
+      <div className="md:hidden space-y-3">
+        {isLoading ? (
+          <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-500">Loading...</div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-500">No products found.</div>
+        ) : filteredProducts.map((product) => (
+          <div key={product.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+            <div className="flex items-start gap-3">
+              <div className="w-14 h-14 flex-shrink-0 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden">
+                <img src={product.image_url} alt="" className="w-full h-full object-cover" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-slate-900 break-words">{product.title}</p>
+                <span className="inline-block mt-1 px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-600">{product.category}</span>
+              </div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
+              <div className="flex items-baseline gap-4 text-sm">
+                <span className="font-bold text-slate-900">Rs{product.price}</span>
+                <span className={product.stock > 0 ? 'text-slate-500' : 'text-red-600 font-semibold'}>
+                  Stock: {product.stock}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <button onClick={() => handleEdit(product)} aria-label="Edit product" className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg"><Edit className="w-4 h-4" /></button>
+                <button onClick={() => handleDelete(product.id)} aria-label="Delete product" className="text-red-600 hover:bg-red-50 p-2 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden md:block bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <table className="w-full">
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
@@ -283,7 +316,7 @@ export default function AdminProducts() {
                       <label className="block text-sm font-bold text-slate-700 mb-1">Product Title</label>
                       <input required type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-slate-900 outline-none" />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-bold text-slate-700 mb-1">Price</label>
                         <input required type="number" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} className="w-full px-4 py-2 border rounded-lg outline-none" />
@@ -293,7 +326,7 @@ export default function AdminProducts() {
                         <input type="number" value={formData.discount} onChange={e => setFormData({...formData, discount: e.target.value})} className="w-full px-4 py-2 border rounded-lg outline-none" />
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-bold text-slate-700 mb-1">Stock</label>
                         <input required type="number" value={formData.stock} onChange={e => setFormData({...formData, stock: e.target.value})} className="w-full px-4 py-2 border rounded-lg outline-none" />

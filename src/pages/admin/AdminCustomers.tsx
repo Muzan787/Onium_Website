@@ -126,8 +126,46 @@ export default function AdminCustomers() {
         </div>
       </div>
 
-      {/* Main Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      {/* Mobile: card list */}
+      <div className="md:hidden space-y-3">
+        {isLoading ? (
+          <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-500">Loading customer profiles...</div>
+        ) : filteredCustomers.length === 0 ? (
+          <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-400">No customers found.</div>
+        ) : filteredCustomers.map((customer, index) => (
+          <button
+            key={index}
+            onClick={() => setSelectedCustomer(customer)}
+            className="w-full text-left bg-white rounded-xl shadow-sm border border-gray-200 p-4 active:bg-slate-50 transition"
+          >
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 flex-shrink-0 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold border border-slate-200">
+                {customer.name.charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="font-bold text-gray-900 break-words">{customer.name}</p>
+                  <Eye size={16} className="flex-shrink-0 mt-1 text-slate-400" />
+                </div>
+                <p className="text-xs text-gray-500">{new Date(customer.lastOrderDate).toLocaleDateString()}</p>
+              </div>
+            </div>
+            <div className="mt-3 space-y-1 text-sm text-gray-600">
+              <div className="flex items-center gap-2 min-w-0"><Mail size={12} className="flex-shrink-0" /> <span className="truncate">{customer.email}</span></div>
+              <div className="flex items-center gap-2"><Phone size={12} className="flex-shrink-0" /> {customer.phone || '-'}</div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+                <ShoppingBag size={10} /> {customer.totalOrders} orders
+              </span>
+              <span className="font-bold text-emerald-600">Rs{customer.totalSpent.toLocaleString()}</span>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden md:block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">

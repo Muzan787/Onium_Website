@@ -12,11 +12,11 @@ export default function FAQ() {
     },
     {
       question: "How long does delivery take?",
-      answer: "We strive to deliver quickly! Standard shipping across Pakistan takes 2-4 business days. Orders placed before 2 PM are usually dispatched the same day."
+      answer: "We strive to deliver quickly! We currently deliver in Islamabad and Rawalpindi only, and orders usually arrive within 1-3 business days. Orders placed before 2 PM are usually dispatched the same day."
     },
     {
-      question: "Do you offer Cash on Delivery (COD)?",
-      answer: "Yes, we offer Cash on Delivery services nationwide. You can pay securely when the rider arrives at your doorstep."
+      question: "Do you offer Pay on Delivery?",
+      answer: "Yes. You can pay when the rider arrives at your doorstep. Online payment by transfer is preferred over cash, and we deliver in Islamabad and Rawalpindi."
     },
     {
       question: "What is your return policy?",

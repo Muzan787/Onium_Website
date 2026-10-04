@@ -207,7 +207,7 @@ export default function Home() {
             <div className="p-2 bg-blue-50 rounded-lg"><Shield className="w-5 h-5 text-blue-500" /></div>
             <div>
               <p className="font-bold text-slate-900 text-sm">100% Secure</p>
-              <p className="text-xs text-slate-500">Cash on Delivery Available</p>
+              <p className="text-xs text-slate-500">Pay on Delivery Available</p>
             </div>
           </div>
         </div>

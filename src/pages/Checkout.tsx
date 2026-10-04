@@ -4,9 +4,12 @@ import { useCart } from '../context/CartContext';
 import { supabase } from '../lib/supabase';
 import { 
   CheckCircle, CreditCard, Package, Home, User, 
-  Ticket, X, Lock, ArrowLeft, ChevronRight, LogIn 
+  Ticket, X, Lock, ArrowLeft, ChevronRight, LogIn, AlertCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+
+// Delivery is limited to these two cities for now.
+const SERVICEABLE_CITIES = ['Islamabad', 'Rawalpindi'];
 
 export default function Checkout() {
   const { cartItems, getTotalPrice, clearCart } = useCart();
@@ -18,9 +21,9 @@ export default function Checkout() {
   // State to save the total before clearing the cart
   const [savedOrderTotal, setSavedOrderTotal] = useState(0);
   
-  const [paymentMethod, setPaymentMethod] = useState('cod');
+  const [paymentMethod] = useState('cod');
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState({ name: '', email: '', phone: '', address: '', city: '', instructions: '' });
+  const [formData, setFormData] = useState({ name: '', email: '', phone: '', address: '', city: 'Islamabad', instructions: '' });
 
   // --- NEW: AUTH STATE ---
   const [user, setUser] = useState<any>(null);
@@ -285,7 +288,21 @@ export default function Checkout() {
             <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 animate-fade-in">
               <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2"><Home className="w-5 h-5 text-secondary-500" /> Shipping Details</h2>
               <div className="space-y-4">
-                <div><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">City</label><input type="text" required value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} className="w-full px-4 py-3.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 outline-none text-base bg-slate-50 focus:bg-white" placeholder="Islamabad" /></div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">City</label>
+                  <select
+                    required
+                    value={formData.city}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    className="w-full px-4 py-3.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 outline-none text-base bg-slate-50 focus:bg-white appearance-none"
+                  >
+                    {SERVICEABLE_CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <p className="mt-2 text-xs text-slate-500 flex items-start gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-px text-accent-500" />
+                    We only deliver to Islamabad/Rawalpindi right now.
+                  </p>
+                </div>
                 <div><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Address</label><textarea required rows={3} value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} className="w-full px-4 py-3.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 outline-none text-base bg-slate-50 focus:bg-white resize-none" placeholder="House #, Street..." /></div>
                 <div><label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Special Instructions (Optional)</label><textarea rows={2} value={formData.instructions} onChange={(e) => setFormData({ ...formData, instructions: e.target.value })} className="w-full px-4 py-3.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-primary-500 outline-none text-base bg-slate-50 focus:bg-white resize-none" placeholder="Landmark, delivery time, etc." /></div>
               </div>
@@ -298,7 +315,11 @@ export default function Checkout() {
               {/* Payment Method */}
               <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
                 <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2"><CreditCard className="w-5 h-5 text-accent-500" /> Payment</h2>
-                <label className="flex items-center gap-4 p-4 border-2 border-primary-500 bg-primary-50/30 rounded-xl cursor-pointer"><div className="flex-shrink-0"><input type="radio" checked readOnly className="w-5 h-5 text-primary-600 focus:ring-primary-500" /></div><div><div className="font-bold text-slate-900">Cash on Delivery</div><div className="text-sm text-slate-500">Pay securely upon delivery</div></div></label>
+                <label className="flex items-center gap-4 p-4 border-2 border-primary-500 bg-primary-50/30 rounded-xl cursor-pointer"><div className="flex-shrink-0"><input type="radio" checked readOnly className="w-5 h-5 text-primary-600 focus:ring-primary-500" /></div><div><div className="font-bold text-slate-900">Pay on Delivery</div><div className="text-sm text-slate-500">Pay securely when your order arrives</div></div></label>
+                <p className="mt-3 text-sm text-slate-600 bg-secondary-50 border border-secondary-100 rounded-xl px-4 py-3 flex items-start gap-2">
+                  <CreditCard className="w-4 h-4 flex-shrink-0 mt-0.5 text-secondary-500" />
+                  <span>Online payment is preferred &mdash; you can pay by transfer when the rider arrives instead of cash.</span>
+                </p>
               </div>
 
               {/* Coupon Section */}

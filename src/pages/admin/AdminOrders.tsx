@@ -146,11 +146,19 @@ export default function AdminOrders() {
     const subtotal = order.subtotal_price || (order.total_price - (order.shipping_charge || 0));
     const shipping = order.shipping_charge || 0;
 
+    // Browsers use the document title as the default filename when the print
+    // dialog saves to PDF, so name it after the customer rather than "Invoice".
+    const safeCustomerName = (order.customer_name || 'Customer')
+      .replace(/[\\/:*?"<>|]/g, '')   // characters Windows/macOS reject in filenames
+      .replace(/\s+/g, ' ')
+      .trim() || 'Customer';
+    const invoiceFileName = `${safeCustomerName} - Onium Invoice #${order.id.slice(0, 8).toUpperCase()}`;
+
     const invoiceHTML = `
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Invoice #${order.id.slice(0, 8).toUpperCase()} - Onium</title>
+        <title>${invoiceFileName}</title>
         <style>
           body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 40px; color: #1f2937; max-width: 800px; margin: 0 auto; }
           .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; border-bottom: 2px solid #f3f4f6; padding-bottom: 20px; }
@@ -195,7 +203,7 @@ export default function AdminOrders() {
           <div class="meta-group">
             <div class="meta-item"><span class="meta-label">Order ID:</span> <span class="meta-value">#${order.id.slice(0, 8).toUpperCase()}</span></div>
             <div class="meta-item"><span class="meta-label">Date:</span> <span class="meta-value">${new Date(order.created_at).toLocaleDateString()}</span></div>
-            <div class="meta-item"><span class="meta-label">Payment:</span> <span class="meta-value" style="text-transform: capitalize;">${order.payment_method === 'cod' ? 'Cash on Delivery' : order.payment_method}</span></div>
+            <div class="meta-item"><span class="meta-label">Payment:</span> <span class="meta-value" style="text-transform: capitalize;">${order.payment_method === 'cod' ? 'Pay on Delivery' : order.payment_method}</span></div>
           </div>
         </div>
 
@@ -341,7 +349,72 @@ export default function AdminOrders() {
 
       {/* Orders Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
+
+        {/* Mobile: card list (7 columns don't fit a phone) */}
+        <div className="md:hidden">
+          {isLoading ? (
+            <div className="p-8 text-center text-gray-500">Loading orders...</div>
+          ) : orders.length === 0 ? (
+            <div className="p-8 text-center text-gray-400">No orders found matching your criteria.</div>
+          ) : (
+            <>
+              <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+                <button onClick={toggleSelectAll} className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase">
+                  {selectedIds.length === orders.length && orders.length > 0 ?
+                    <CheckSquare className="w-5 h-5 text-slate-900" /> :
+                    <Square className="w-5 h-5 text-gray-400" />
+                  }
+                  Select all
+                </button>
+              </div>
+              <div className="divide-y divide-gray-100">
+                {orders.map((order) => (
+                  <div key={order.id} className={`p-4 ${selectedIds.includes(order.id) ? 'bg-slate-50' : ''}`}>
+                    <div className="flex items-start gap-3">
+                      <button onClick={() => toggleSelectOrder(order.id)} aria-label="Select order" className="flex-shrink-0 mt-0.5">
+                        {selectedIds.includes(order.id) ?
+                          <CheckSquare className="w-5 h-5 text-slate-900" /> :
+                          <Square className="w-5 h-5 text-gray-300" />
+                        }
+                      </button>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <span className="font-mono text-sm text-slate-600">#{order.id.slice(0, 6)}</span>
+                          <span className="font-bold text-gray-900">Rs{order.total_price.toFixed(0)}</span>
+                        </div>
+                        <p className="font-medium text-gray-900 break-words mt-1">{order.customer_name}</p>
+                        <p className="text-xs text-gray-500">
+                          {new Date(order.created_at).toLocaleDateString()} &middot; {order.order_items.length} items
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between gap-3">
+                      <select
+                        value={order.status}
+                        onChange={(e) => updateOrderStatus(order.id, e.target.value)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-bold capitalize cursor-pointer border-0 ring-1 ring-inset focus:ring-2 ${getStatusColor(order.status)}`}
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="processing">Processing</option>
+                        <option value="shipped">Shipped</option>
+                        <option value="delivered">Delivered</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+                      <button
+                        onClick={() => setSelectedOrder(order)}
+                        className="text-slate-600 font-medium text-sm underline underline-offset-2"
+                      >
+                        View Details
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>

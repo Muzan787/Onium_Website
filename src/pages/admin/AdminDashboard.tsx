@@ -254,7 +254,35 @@ export default function AdminDashboard() {
             View All Orders <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
-        <div className="overflow-x-auto">
+        {/* Mobile: card list */}
+        <div className="md:hidden divide-y divide-slate-50">
+          {recentOrders.length === 0 ? (
+            <div className="p-8 text-center text-slate-400">No orders found.</div>
+          ) : recentOrders.map((order) => (
+            <div key={order.id} className="p-4">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="font-mono text-xs text-slate-500">#{order.id.slice(0, 8).toUpperCase()}</span>
+                <span className="font-bold text-slate-900">Rs{order.total_price.toLocaleString()}</span>
+              </div>
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="font-medium text-slate-900 break-words">{order.customer_name}</p>
+                  <p className="text-xs text-slate-500">{new Date(order.created_at).toLocaleDateString()}</p>
+                </div>
+                <span className={`flex-shrink-0 inline-flex px-2 py-1 rounded-full text-xs font-bold uppercase tracking-wide
+                  ${order.status === 'delivered' ? 'bg-emerald-100 text-emerald-700' :
+                    order.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                    order.status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}
+                `}>
+                  {order.status}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop: table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50/50 text-slate-500 font-medium">
               <tr>

@@ -27,7 +27,36 @@ export default function AdminReviews() {
   return (
     <div>
       <h2 className="text-2xl font-bold mb-6">Manage Reviews</h2>
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      {/* Mobile: card list */}
+      <div className="md:hidden space-y-3">
+        {reviews.length === 0 ? (
+          <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">No reviews yet.</div>
+        ) : reviews.map(review => (
+          <div key={review.id} className="bg-white rounded-lg shadow p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-medium text-gray-900 break-words">{review.customer_name}</p>
+                <p className="text-sm text-gray-500 mt-0.5">{review.rating} Stars</p>
+              </div>
+              <span className={`flex-shrink-0 px-2 py-1 rounded-full text-xs ${review.is_approved ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                {review.is_approved ? 'Approved' : 'Pending'}
+              </span>
+            </div>
+            <p className="mt-3 text-sm text-gray-700 break-words">{review.comment}</p>
+            <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-end gap-1">
+              <button onClick={() => toggleApproval(review.id, review.is_approved)} aria-label="Toggle approval" className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg">
+                <Check size={20} />
+              </button>
+              <button onClick={() => deleteReview(review.id)} aria-label="Delete review" className="text-red-600 hover:bg-red-50 p-2 rounded-lg">
+                <Trash2 size={20} />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden md:block bg-white rounded-lg shadow overflow-hidden">
         <table className="w-full text-left">
           <thead className="bg-gray-50 text-xs uppercase text-gray-500">
             <tr>
