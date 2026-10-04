@@ -14,8 +14,13 @@ export default function SEO({ title, description, image, url, noIndex }: SEOProp
   const siteUrl = 'https://onium.store';
   const defaultImage = 'https://res.cloudinary.com/dztldh7o2/image/upload/v1769193183/Screenshot_2026-01-23_233205_aptge2.png';
 
+  // defer={false} writes the tags during render instead of inside a
+  // requestAnimationFrame. Browsers suspend rAF in hidden pages, so with the
+  // default the title and meta never get applied in a background tab —
+  // middle-clicked product links would all sit there showing the generic
+  // index.html title until you actually switched to them.
   return (
-    <Helmet>
+    <Helmet defer={false}>
       {/* Standard Metadata */}
       <title>{`${title} | ${siteTitle}`}</title>
       <meta name="description" content={description || defaultDescription} />
