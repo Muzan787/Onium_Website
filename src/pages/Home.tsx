@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
-import { MessageCircle, ShieldCheck, Baby, Zap, X, type LucideIcon } from 'lucide-react';
-import { AnimatePresence, motion, useMotionValueEvent, useReducedMotion, useScroll, useTransform } from 'framer-motion';
+import { MessageCircle, ShieldCheck, Baby, Zap, X, Pause, Play, type LucideIcon } from 'lucide-react';
+import { AnimatePresence, motion, useInView, useMotionValueEvent, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import { supabase, Product } from '../lib/supabase';
 import { ACCENTS } from '../lib/productAccents';
 import { categoryLabel, formatRs } from '../lib/format';
+import { FREE_DELIVERY_FROM } from '../lib/pricing';
 import ProductRow from '../components/ProductRow';
 import Reassurance from '../components/Reassurance';
 import SEO from '../components/SEO';
@@ -13,9 +14,44 @@ const WHATSAPP = 'https://wa.me/923231550147';
 const ORDER_TEXT = encodeURIComponent('Asalamo Alikum, I want to order…');
 const BULK_TEXT = encodeURIComponent("I'm interested in a bulk order for my business…");
 
-/** The gold dish wash bottle: the strongest colour against the logo blue. */
-const HERO_BOTTLE =
-  'https://res.cloudinary.com/dztldh7o2/image/upload/f_auto,q_auto,h_900/v1769461877/4_nlecjj.png';
+/**
+ * Cut-out bottles that take turns in the hero, starting with the gold dish
+ * wash (the strongest colour against the logo blue) and ordered so similar
+ * colours never follow each other. The light behind each one takes on its
+ * colour. Washing powder has no cut-out yet, so it sits this out.
+ * Requested at their native 500px; anything larger only upscales.
+ */
+const HERO_BOTTLES = [
+  { name: 'Dish wash', path: 'v1769461877/4_nlecjj', glow: ACCENTS.gold.solid },
+  { name: 'Glass cleaner', path: 'v1769461878/6_ek3cwb', glow: ACCENTS.cyan.solid },
+  { name: 'Sweep cleaner', path: 'v1769461877/3_lfjeod', glow: ACCENTS.clay.solid },
+  { name: 'Liquid detergent', path: 'v1769461880/8_lgiswx', glow: ACCENTS.cyan.solid },
+  { name: 'Phenyl', path: 'v1769461877/2_gjkqik', glow: ACCENTS.gold.solid },
+  { name: 'Toilet cleaner', path: 'v1769461877/5_p5xx5m', glow: ACCENTS.cyan.solid },
+  { name: 'Hand wash', path: 'v1769461877/1_evgktx', glow: ACCENTS.teal.solid },
+].map((bottle) => ({
+  ...bottle,
+  src: `https://res.cloudinary.com/dztldh7o2/image/upload/f_auto,q_auto,w_500/${bottle.path}.png`,
+}));
+
+/** How long each bottle rests once it has landed, before the next swings in. */
+const BOTTLE_HOLD_MS = 1000;
+
+const preloaded = new Map<string, Promise<void>>();
+/** Resolves once an image is downloaded, so a bottle never swings in half-loaded. */
+function preload(src: string) {
+  let pending = preloaded.get(src);
+  if (!pending) {
+    pending = new Promise<void>((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve();
+      img.onerror = () => resolve();
+      img.src = src;
+    });
+    preloaded.set(src, pending);
+  }
+  return pending;
+}
 
 const CLAIMS: { heading: string; body: string; icon: LucideIcon; color: string; tint: string }[] = [
   {
@@ -64,6 +100,36 @@ export default function Home() {
   const bottleY = useTransform(scrollYProgress, [0, 1], [0, -90]);
   const bottleRotate = useTransform(scrollYProgress, [0, 1], [8, 17]);
   const glowScale = useTransform(scrollYProgress, [0, 1], [1, 1.35]);
+
+  // The bottles take turns: each rises in, rests for a second, then swings
+  // out for the next. They wait while the hero is off screen, and stop for
+  // good if the visitor pauses them or has asked for less motion.
+  const [bottleIndex, setBottleIndex] = useState(0);
+  const [bottleLanded, setBottleLanded] = useState(false);
+  const [bottlesPaused, setBottlesPaused] = useState(false);
+  const firstBottle = useRef(true);
+  const heroInView = useInView(heroRef, { amount: 0.25 });
+  const bottlesCycling = !reduceMotion && !bottlesPaused && heroInView;
+  const bottle = HERO_BOTTLES[bottleIndex];
+
+  useEffect(() => {
+    if (!bottleLanded || !bottlesCycling) return;
+    const next = (bottleIndex + 1) % HERO_BOTTLES.length;
+    const ready = preload(HERO_BOTTLES[next].src);
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      ready.then(() => {
+        if (cancelled) return;
+        firstBottle.current = false;
+        setBottleLanded(false);
+        setBottleIndex(next);
+      });
+    }, BOTTLE_HOLD_MS);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [bottleLanded, bottlesCycling, bottleIndex]);
 
   // The hero already has a WhatsApp button, and on a phone the floating one
   // would sit on top of the delivery promise in the first screen. Bring it in
@@ -197,9 +263,12 @@ export default function Home() {
             aria-hidden
             className="absolute -bottom-24 -right-24 w-[420px] h-[420px] md:w-[620px] md:h-[620px] rounded-full -z-10 blur-[80px] opacity-60"
             style={{
-              background: `radial-gradient(circle, ${ACCENTS.gold.solid} 0%, transparent 70%)`,
+              background: 'radial-gradient(circle, var(--glow) 0%, transparent 70%)',
               scale: reduceMotion ? 1 : glowScale,
             }}
+            initial={{ ['--glow' as string]: HERO_BOTTLES[0].glow }}
+            animate={{ ['--glow' as string]: bottle.glow }}
+            transition={{ duration: 0.9, ease: 'easeInOut' }}
           />
 
           <div className="container mx-auto px-4 pt-12 pb-36 md:pt-20 md:pb-28">
@@ -238,6 +307,22 @@ export default function Home() {
                 Order on WhatsApp
               </a>
             </motion.div>
+
+            {/* A price sticker floating in the space under the buttons. The
+                small line is set above the big one but read after it. */}
+            <motion.div {...rise(0.32)} className="mt-7 md:mt-9">
+              <motion.p
+                className="inline-flex flex-col-reverse items-start px-4 py-2.5 rounded-2xl bg-accent-300 text-ink shadow-[0_14px_28px_-14px_rgba(10,27,61,0.6)]"
+                style={{ rotate: -4 }}
+                animate={bottlesCycling ? { y: [0, -7, 0] } : { y: 0 }}
+                transition={bottlesCycling ? { duration: 3.2, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.3 }}
+              >
+                <span className="font-display font-extrabold text-[22px] md:text-[26px] leading-tight">Free delivery</span>
+                <span className="text-[12px] md:text-[13px] font-semibold text-ink/75 tabular">
+                  {formatRs(FREE_DELIVERY_FROM)} &amp; above
+                </span>
+              </motion.p>
+            </motion.div>
           </div>
 
           {/* The bottle breaks out of the bottom-right corner. The outer layer
@@ -245,21 +330,51 @@ export default function Home() {
               never fight over the same transform. */}
           <motion.div
             aria-hidden
-            className="pointer-events-none absolute -bottom-20 -right-[84px] w-[290px] md:w-[460px] md:-right-16 md:-bottom-28 lg:right-[6%]"
+            className="pointer-events-none absolute -bottom-7 -right-[84px] w-[290px] md:w-[460px] md:-right-16 md:-bottom-28 lg:right-[6%]"
             style={reduceMotion ? { rotate: 8 } : { y: bottleY, rotate: bottleRotate }}
           >
-            <motion.img
-              src={HERO_BOTTLE}
-              alt=""
-              width={580}
-              height={580}
-              decoding="async"
-              className="w-full h-auto object-contain drop-shadow-[-12px_24px_32px_rgba(10,27,61,0.35)]"
-              initial={reduceMotion ? false : { opacity: 0, y: 140, rotate: 14 }}
-              animate={{ opacity: 1, y: 0, rotate: 0 }}
-              transition={{ type: 'spring', stiffness: 70, damping: 16, delay: 0.35 }}
-            />
+            <AnimatePresence mode="wait" initial={!reduceMotion}>
+              <motion.img
+                key={bottle.src}
+                src={bottle.src}
+                alt=""
+                width={500}
+                height={500}
+                decoding="async"
+                className="w-full h-auto object-contain drop-shadow-[-12px_24px_32px_rgba(10,27,61,0.35)]"
+                variants={{
+                  hidden: { opacity: 0, y: 140, rotate: 14 },
+                  shown: {
+                    opacity: 1,
+                    y: 0,
+                    rotate: 0,
+                    transition: firstBottle.current
+                      ? { type: 'spring', stiffness: 70, damping: 16, delay: 0.35 }
+                      : { type: 'spring', stiffness: 120, damping: 16 },
+                  },
+                  // Swings out the way the next one swings in.
+                  gone: { opacity: 0, x: -50, y: -24, rotate: -16, transition: { duration: 0.35, ease: [0.7, 0, 0.84, 0] } },
+                }}
+                initial={reduceMotion ? false : 'hidden'}
+                animate="shown"
+                exit="gone"
+                onAnimationComplete={(definition) => definition === 'shown' && setBottleLanded(true)}
+              />
+            </AnimatePresence>
           </motion.div>
+
+          {!reduceMotion && (
+            <button
+              type="button"
+              onClick={() => setBottlesPaused((paused) => !paused)}
+              aria-label={bottlesPaused ? 'Play the product animation' : 'Pause the product animation'}
+              className="absolute bottom-3 left-3 z-10 w-11 h-11 grid place-items-center rounded-full text-white"
+            >
+              <span className="w-8 h-8 grid place-items-center rounded-full bg-ink/30 hover:bg-ink/50 transition-colors">
+                {bottlesPaused ? <Play className="w-3.5 h-3.5" fill="currentColor" aria-hidden /> : <Pause className="w-3.5 h-3.5" fill="currentColor" aria-hidden />}
+              </span>
+            </button>
+          )}
         </section>
 
         {/* ---------------------------------------------------- REASSURANCE */}
