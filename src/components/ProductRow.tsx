@@ -1,11 +1,11 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useRef, useState } from 'react';
 import { Plus, Check } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Product } from '../lib/supabase';
 import { accentFor } from '../lib/productAccents';
 import { categoryLabel, formatRs, splitTitle } from '../lib/format';
 import { useCart } from '../context/CartContext';
+import ProductLink from './ProductLink';
 
 interface ProductRowProps {
   product: Product;
@@ -18,12 +18,12 @@ interface ProductRowProps {
 export default function ProductRow({ product, index }: ProductRowProps) {
   const { addToCart } = useCart();
   const [isAdded, setIsAdded] = useState(false);
+  const photoRef = useRef<HTMLAnchorElement>(null);
   const reduceMotion = useReducedMotion();
 
   const accent = accentFor(product);
   const { name, detail } = splitTitle(product.title);
   const flipped = index % 2 === 1;
-  const href = `/product/${product.slug}`;
 
   const hasDiscount = (product.discount || 0) > 0;
   const finalPrice = hasDiscount ? product.price * (1 - (product.discount || 0) / 100) : product.price;
@@ -56,8 +56,10 @@ export default function ProductRow({ product, index }: ProductRowProps) {
           viewport={{ once: true, margin: '0px 0px -12% 0px' }}
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         >
-          <Link
-            to={href}
+          <ProductLink
+            ref={photoRef}
+            product={product}
+            photo={photoRef}
             tabIndex={-1}
             aria-hidden
             className="relative block aspect-square rounded-2xl overflow-hidden"
@@ -77,7 +79,7 @@ export default function ProductRow({ product, index }: ProductRowProps) {
                 {product.discount}% off
               </span>
             )}
-          </Link>
+          </ProductLink>
         </motion.div>
 
         <div className="flex-1 min-w-0">
@@ -85,13 +87,14 @@ export default function ProductRow({ product, index }: ProductRowProps) {
             {categoryLabel(product.category)}
           </p>
           <h3 className="font-display font-extrabold text-ink text-[21px] leading-[1.1]">
-            <Link
-              to={href}
+            <ProductLink
+              product={product}
+              photo={photoRef}
               title={product.title}
               className="hover:text-primary-700 transition-colors focus-visible:underline"
             >
               {name}
-            </Link>
+            </ProductLink>
           </h3>
           {detail && <p className="mt-1.5 text-[13px] text-ink/70 line-clamp-2">{detail}</p>}
 

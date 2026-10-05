@@ -6,6 +6,7 @@ import { supabase, Product } from '../lib/supabase';
 import { ACCENTS } from '../lib/productAccents';
 import { categoryLabel, formatRs } from '../lib/format';
 import ProductRow from '../components/ProductRow';
+import Reassurance from '../components/Reassurance';
 import SEO from '../components/SEO';
 
 const WHATSAPP = 'https://wa.me/923231550147';
@@ -262,28 +263,7 @@ export default function Home() {
         </section>
 
         {/* ---------------------------------------------------- REASSURANCE */}
-        <div className="bg-white border-b border-ink/10">
-          <ul className="container mx-auto px-4 grid grid-cols-3">
-            {[
-              { title: 'Pay on delivery', sub: 'Cash or transfer' },
-              { title: 'Free delivery', sub: `Over ${formatRs(3000)}` },
-              {
-                title: '1–3 days',
-                sub: 'Isb & Rwp',
-                label: 'Delivered in 1 to 3 days in Islamabad and Rawalpindi',
-              },
-            ].map(({ title, sub, label }, i) => (
-              <li
-                key={title}
-                aria-label={label}
-                className={`py-4 px-1 text-center ${i ? 'border-l border-ink/10' : ''}`}
-              >
-                <p className="text-[12px] sm:text-sm font-semibold text-ink leading-tight">{title}</p>
-                <p className="text-[11px] sm:text-xs text-ink/70 mt-0.5 tabular">{sub}</p>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <Reassurance />
 
         {/* ------------------------------------------------------- THE RANGE */}
         <section id="products" aria-labelledby="range-heading" className="py-12 md:py-20 scroll-mt-[120px]">

@@ -94,6 +94,24 @@ html {
   }
 }
 
+/* The product page photo is where a tapped product photo lands (lib/morph.ts).
+   While a card on the product page itself is taking off, the page photo
+   gives up the name so the browser never sees two elements sharing it. */
+.product-photo {
+  view-transition-name: product-photo;
+}
+:root[data-morph] .product-photo {
+  view-transition-name: none;
+}
+::view-transition-group(product-photo) {
+  animation-duration: 0.5s;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.3s;
+}
+
 /* Nothing on the page should move for someone who has asked it not to. */
 @media (prefers-reduced-motion: reduce) {
   html {
@@ -105,5 +123,10 @@ html {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }
