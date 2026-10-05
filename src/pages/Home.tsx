@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { MessageCircle, ShieldCheck, Baby, Zap, type LucideIcon } from 'lucide-react';
+import { useLocation, useSearchParams } from 'react-router-dom';
+import { MessageCircle, ShieldCheck, Baby, Zap, X, type LucideIcon } from 'lucide-react';
 import { AnimatePresence, motion, useMotionValueEvent, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import { supabase, Product } from '../lib/supabase';
 import { ACCENTS } from '../lib/productAccents';
@@ -51,6 +51,8 @@ export default function Home() {
   // on WhatsApp and survives a refresh.
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedCategory = searchParams.get('category') ?? 'all';
+  const query = (searchParams.get('q') ?? '').trim();
+  const location = useLocation();
 
   const reduceMotion = useReducedMotion();
   const heroRef = useRef<HTMLElement>(null);
@@ -65,8 +67,17 @@ export default function Home() {
   // The hero already has a WhatsApp button, and on a phone the floating one
   // would sit on top of the delivery promise in the first screen. Bring it in
   // only once the hero's own button has scrolled away.
-  const [showFab, setShowFab] = useState(false);
-  useMotionValueEvent(scrollYProgress, 'change', (v) => setShowFab(v > 0.8));
+  const [pastHero, setPastHero] = useState(false);
+  const [footerInView, setFooterInView] = useState(false);
+  useMotionValueEvent(scrollYProgress, 'change', (v) => setPastHero(v > 0.8));
+  useEffect(() => {
+    const footer = document.querySelector('footer');
+    if (!footer) return;
+    const io = new IntersectionObserver(([entry]) => setFooterInView(entry.isIntersecting));
+    io.observe(footer);
+    return () => io.disconnect();
+  }, []);
+  const showFab = pastHero && !footerInView;
 
   useEffect(() => {
     (async () => {
@@ -88,18 +99,33 @@ export default function Home() {
   const categories = useMemo(() => Array.from(new Set(products.map((p) => p.category))), [products]);
 
   const visibleProducts = useMemo(() => {
-    const list =
-      selectedCategory === 'all' ? [...products] : products.filter((p) => p.category === selectedCategory);
+    const needle = query.toLowerCase();
+    const list = products.filter(
+      (p) =>
+        (selectedCategory === 'all' || p.category === selectedCategory) &&
+        (!needle || `${p.title} ${p.category}`.toLowerCase().includes(needle))
+    );
     if (sortBy === 'price-low') list.sort((a, b) => a.price - b.price);
     if (sortBy === 'price-high') list.sort((a, b) => b.price - a.price);
     return list;
-  }, [products, selectedCategory, sortBy]);
+  }, [products, selectedCategory, sortBy, query]);
 
   const priceRange = useMemo(() => {
     if (!products.length) return null;
     const prices = products.map((p) => p.price);
     return { min: Math.min(...prices), max: Math.max(...prices) };
   }, [products]);
+
+  useEffect(() => {
+    if (isLoading || location.hash !== '#products') return;
+    document.getElementById('products')?.scrollIntoView({ behavior: 'auto' });
+  }, [isLoading, location.hash, location.search]);
+
+  const clearSearch = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('q');
+    setSearchParams(next, { replace: true });
+  };
 
   const chooseCategory = (category: string) => {
     const next = new URLSearchParams(searchParams);
@@ -120,7 +146,9 @@ export default function Home() {
 
   const chip = (active: boolean) =>
     `inline-flex items-center min-h-11 px-4 rounded-full text-[13px] font-medium whitespace-nowrap transition-colors ${
-      active ? 'bg-ink text-white' : 'bg-white text-ink/75 border border-ink/15 hover:border-ink/35'
+      active
+        ? 'bg-white text-primary-600 font-semibold'
+        : 'text-white border border-white/60 hover:bg-white/10'
     }`;
 
   return (
@@ -136,9 +164,9 @@ export default function Home() {
       <div>
         <nav
           aria-label="Product categories"
-          className="sticky top-14 z-40 bg-surface/95 backdrop-blur-md border-b border-ink/10"
+          className="sticky top-14 z-40 bg-primary-600 shadow-[0_1px_0_0_#1757d1]"
         >
-          <div className="container mx-auto flex items-center gap-2 px-4 py-3 overflow-x-auto no-scrollbar">
+          <div className="container mx-auto flex items-center gap-2 px-4 pt-1 pb-3 overflow-x-auto no-scrollbar">
             <button
               type="button"
               onClick={() => chooseCategory('all')}
@@ -171,12 +199,6 @@ export default function Home() {
               background: `radial-gradient(circle, ${ACCENTS.gold.solid} 0%, transparent 70%)`,
               scale: reduceMotion ? 1 : glowScale,
             }}
-          />
-          {/* A cooler highlight top-left so the blue isn't flat */}
-          <div
-            aria-hidden
-            className="absolute -top-32 -left-24 w-[360px] h-[360px] rounded-full -z-10 blur-[90px] opacity-40"
-            style={{ background: 'radial-gradient(circle, #6095fa 0%, transparent 70%)' }}
           />
 
           <div className="container mx-auto px-4 pt-12 pb-36 md:pt-20 md:pb-28">
@@ -270,11 +292,26 @@ export default function Home() {
               <h2 id="range-heading" className="font-display font-extrabold text-ink text-3xl md:text-4xl">
                 The range
               </h2>
+              {query ? (
+                <p className="mt-2 text-[15px] text-ink/70 flex flex-wrap items-center gap-x-2">
+                  <span>
+                    {visibleProducts.length} {visibleProducts.length === 1 ? 'result' : 'results'} for “{query}”
+                  </span>
+                  <button
+                    type="button"
+                    onClick={clearSearch}
+                    className="inline-flex items-center gap-1 min-h-11 font-semibold text-primary-700 hover:underline"
+                  >
+                    <X className="w-4 h-4" aria-hidden /> Clear search
+                  </button>
+                </p>
+              ) : (
               <p className="mt-2 text-[15px] text-ink/70 tabular">
                 {priceRange
                   ? `${products.length} cleaners, ${formatRs(priceRange.min)} to ${formatRs(priceRange.max)}.`
                   : 'Everyday cleaners for the whole house.'}
               </p>
+              )}
             </div>
 
             {products.length > 1 && (
@@ -311,11 +348,15 @@ export default function Home() {
               </div>
             ) : visibleProducts.length === 0 ? (
               <div className="px-4 py-16 text-center">
-                <h3 className="font-display font-bold text-xl text-ink">Nothing in this category yet</h3>
-                <p className="mt-2 text-ink/70">Everything else in the range is one tap away.</p>
+                <h3 className="font-display font-bold text-xl text-ink">
+                  {query ? `Nothing matches “${query}”` : 'Nothing in this category yet'}
+                </h3>
+                <p className="mt-2 text-ink/70">
+                  {query ? 'Try a shorter word, like “glass” or “floor”.' : 'Everything else in the range is one tap away.'}
+                </p>
                 <button
                   type="button"
-                  onClick={() => chooseCategory('all')}
+                  onClick={() => setSearchParams(new URLSearchParams(), { replace: true })}
                   className="mt-5 bg-primary-600 text-white font-semibold px-6 py-3 rounded-full hover:bg-primary-700 transition-colors"
                 >
                   Show everything
