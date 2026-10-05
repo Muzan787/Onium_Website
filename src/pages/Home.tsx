@@ -1,34 +1,63 @@
-import { useEffect, useState } from 'react';
-import { 
-  Sparkles, Filter, Shield, Truck, MessageCircle, Star, ArrowUpDown 
-} from 'lucide-react';
-import { motion } from 'framer-motion';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { MessageCircle, Star } from 'lucide-react';
+import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import { supabase, Product } from '../lib/supabase';
 import ProductCard from '../components/ProductCard';
+import { ACCENTS } from '../lib/productAccents';
 import SEO from '../components/SEO';
 
-const FLOAT_IMAGES = [
-  "https://res.cloudinary.com/dztldh7o2/image/upload/v1769461880/8_lgiswx.png", 
-  "https://res.cloudinary.com/dztldh7o2/image/upload/v1769461878/7_rh53s3.png",
-  "https://res.cloudinary.com/dztldh7o2/image/upload/v1769461878/6_ek3cwb.png",
-  "https://res.cloudinary.com/dztldh7o2/image/upload/v1769461877/1_evgktx.png",
-  "https://res.cloudinary.com/dztldh7o2/image/upload/v1769461877/2_gjkqik.png",
-  "https://res.cloudinary.com/dztldh7o2/image/upload/v1769461877/5_p5xx5m.png",
-  "https://res.cloudinary.com/dztldh7o2/image/upload/v1769461877/3_lfjeod.png",
-  "https://res.cloudinary.com/dztldh7o2/image/upload/v1769461877/4_nlecjj.png",
+const WHATSAPP = 'https://wa.me/923231550147';
+
+/** Cloudinary can resize and re-encode on the fly; the originals are 1000px squares. */
+const cld = (url: string, t: string) =>
+  url.includes('/upload/') ? url.replace('/upload/', `/upload/${t}/`) : url;
+
+const HERO_IMAGE =
+  'https://res.cloudinary.com/dztldh7o2/image/upload/v1769886084/c3dethlgcl5b9ht7wxgn.jpg';
+
+/** The three things worth saying, each carrying one colour from the range. */
+const CLAIMS = [
+  {
+    heading: 'Nothing harsh in the bottle',
+    body: 'Non-toxic, biodegradable formulas. No bleach, no ammonia, no fumes left hanging in the room.',
+    color: ACCENTS.teal.solid,
+  },
+  {
+    heading: 'Safe around kids and pets',
+    body: 'Made to be used in a home where someone small is always underfoot.',
+    color: ACCENTS.gold.solid,
+  },
+  {
+    heading: '10× power on grease',
+    body: 'The cleaning still has to work. Every bottle is built for the worst job in the house.',
+    color: ACCENTS.clay.solid,
+  },
 ];
 
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
-  // Filter & Sort States
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [categories, setCategories] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<string>('newest');
-  const [showFilters, setShowFilters] = useState(false);
-
   const [stats, setStats] = useState({ average: 0, total: 0 });
+
+  const reduceMotion = useReducedMotion();
+  const claimsRef = useRef<HTMLDivElement>(null);
+
+  // The signature moment: scrolling the claims band lights the page with each
+  // product colour in turn. These are cross-fading glows over a constant ink
+  // base rather than an animated background colour — interpolating teal to
+  // gold to clay in RGB goes through mud, and white type on a gold field is
+  // nowhere near readable.
+  const { scrollYProgress } = useScroll({
+    target: claimsRef,
+    offset: ['start end', 'end start'],
+  });
+  const glow1 = useTransform(scrollYProgress, [0.05, 0.25, 0.42], [0, 0.5, 0]);
+  const glow2 = useTransform(scrollYProgress, [0.3, 0.5, 0.68], [0, 0.5, 0]);
+  const glow3 = useTransform(scrollYProgress, [0.55, 0.75, 0.95], [0, 0.5, 0]);
+  const glows = [glow1, glow2, glow3];
 
   useEffect(() => {
     fetchGlobalStats();
@@ -45,12 +74,13 @@ export default function Home() {
 
   const fetchProducts = async () => {
     try {
-      const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: false });
       if (error) throw error;
-
       setProducts(data || []);
-      const uniqueCategories = Array.from(new Set((data || []).map(p => p.category)));
-      setCategories(uniqueCategories);
+      setCategories(Array.from(new Set((data || []).map((p) => p.category))));
     } catch (error) {
       console.error('Error fetching products:', error);
     } finally {
@@ -58,269 +88,275 @@ export default function Home() {
     }
   };
 
-  const getFilteredProducts = () => {
+  const visibleProducts = useMemo(() => {
     let filtered = [...products];
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter(p => p.category === selectedCategory);
-    }
+    if (selectedCategory !== 'all') filtered = filtered.filter((p) => p.category === selectedCategory);
     if (sortBy === 'price-low') filtered.sort((a, b) => a.price - b.price);
     if (sortBy === 'price-high') filtered.sort((a, b) => b.price - a.price);
     return filtered;
-  };
+  }, [products, selectedCategory, sortBy]);
+
+  const cheapest = useMemo(
+    () => (products.length ? Math.min(...products.map((p) => p.price)) : null),
+    [products]
+  );
+
+  const ease = [0.16, 1, 0.3, 1] as const;
+  const rise = (delay: number) =>
+    reduceMotion
+      ? {}
+      : {
+          initial: { opacity: 0, y: 24 },
+          animate: { opacity: 1, y: 0 },
+          transition: { duration: 0.7, delay, ease },
+        };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="bg-surface">
       <SEO title="Home" description="Premium eco-friendly cleaning solutions for a safer, sparklier home." />
 
-      {/* --- UPGRADED HERO SECTION --- */}
-      <div className="relative bg-slate-900 pt-24 pb-16 lg:pt-0 lg:pb-12 overflow-hidden">
-        
-        {/* Background Image: Blurred & Blended */}
-        <div className="absolute inset-0 z-0">
-          <img 
-            src="https://res.cloudinary.com/dztldh7o2/image/upload/v1769680547/ONIUM_owkhtd.png"
-            alt="Hero Background"
-            className="w-full h-full object-cover blur-[3px] opacity-30"
-          />
-          {/* Overlay to ensure seamless blending with slate background */}
-          <div className="absolute inset-0 bg-slate-900/40 mix-blend-multiply"></div>
-        </div>
+      {/* ---------------------------------------------------------------- HERO */}
+      <section className="relative min-h-[80svh] flex items-end overflow-hidden">
+        <img
+          src={cld(HERO_IMAGE, 'f_auto,q_auto,w_1200')}
+          alt="Onium dish wash on a sunlit kitchen table"
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{ objectPosition: '38% top' }}
+          decoding="async"
+        />
+        {/* Opaque only where the type actually sits, so most of the frame stays
+            a photograph rather than a dark slab. */}
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage:
+              'linear-gradient(to top, rgba(10,27,61,0.96) 0%, rgba(10,27,61,0.9) 22%, rgba(10,27,61,0.55) 42%, rgba(10,27,61,0.12) 66%, rgba(10,27,61,0) 100%)',
+          }}
+        />
 
-        {/* Animated Background Blobs */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <motion.div 
-            animate={{ x: [0, 50, 0], y: [0, -50, 0], scale: [1, 1.2, 1] }}
-            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-            className="absolute -top-20 -left-20 w-96 h-96 bg-primary-500/20 rounded-full blur-[100px]"
-          />
-          <motion.div 
-            animate={{ x: [0, -30, 0], y: [0, 40, 0], scale: [1, 1.1, 1] }}
-            transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-            className="absolute top-1/2 -right-20 w-80 h-80 bg-secondary-500/20 rounded-full blur-[80px]"
-          />
-        </div>
-
-        {/* --- NEW: FLOATING PRODUCT MARQUEE --- */}
-        {/* This fills the space between header and text on mobile */}
-        <div className="absolute top-8 left-0 w-full overflow-hidden z-0 opacity-100 pointer-events-none md:hidden">
-          <div className="relative flex">
-            <motion.div
-              className="flex gap-8 px-4"
-              // We animate x from 0% to -50% assuming the list is duplicated once.
-              animate={{ x: ["0%", "-50%"] }}
-              transition={{ 
-                duration: 20, // Adjust speed (lower = faster)
-                repeat: Infinity, 
-                ease: "linear" 
-              }}
+        <div className="relative container mx-auto px-4 pb-12 pt-24">
+          <div className="max-w-xl">
+            <motion.h1
+              {...rise(0.05)}
+              className="font-display font-extrabold text-white text-[clamp(2.25rem,9vw,4.5rem)] leading-[0.95]"
             >
-              {/* Duplicate the array 4 times to ensure it's long enough to loop smoothly on all screens */}
-              {[...FLOAT_IMAGES, ...FLOAT_IMAGES, ...FLOAT_IMAGES, ...FLOAT_IMAGES].map((img, i) => (
-                <div key={i} className="flex-shrink-0">
-                  <img 
-                    src={img} 
-                    alt="Floating Product" 
-                    className="w-24 h-24 md:w-32 md:h-32 object-contain drop-shadow-[0_10px_10px_rgba(0,0,0,0.3)]"
-                  />
-                </div>
-              ))}
+              10× the power.
+              <br />
+              None of the harsh stuff.
+            </motion.h1>
+
+            <motion.p {...rise(0.18)} className="mt-4 text-white/75 text-base sm:text-lg leading-relaxed max-w-sm">
+              Eight everyday cleaners, delivered across Islamabad and Rawalpindi.
+            </motion.p>
+
+            <motion.div {...rise(0.3)} className="mt-7 flex flex-wrap items-center gap-3">
+              <a
+                href="#products"
+                className="inline-flex items-center gap-2 bg-white text-ink font-semibold px-6 py-3.5 rounded-full hover:bg-primary-50 active:scale-95 transition-all"
+              >
+                Shop the range
+                {cheapest !== null && (
+                  <span className="text-ink/45 tabular">from Rs {cheapest.toFixed(0)}</span>
+                )}
+              </a>
+              <a
+                href={`${WHATSAPP}?text=Asalamo%20Alikum%2C%20I%20want%20to%20order...`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 border border-white/30 text-white font-semibold px-5 py-3.5 rounded-full hover:bg-white/10 transition-colors"
+              >
+                <MessageCircle className="w-4 h-4" />
+                WhatsApp
+              </a>
             </motion.div>
           </div>
         </div>
-        {/* --- END MARQUEE --- */}
+      </section>
 
-        <div className="container mx-auto px-4 relative z-10 text-center mt-14 md:mt-12 ">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-white/90 text-xs font-bold mb-6 border border-white/10 backdrop-blur-sm"
-          >
-            <Sparkles className="w-3 h-3 text-yellow-400" />
-            <span>Premium Cleaning Solutions</span>
-          </motion.div>
-          
-          <motion.h1 
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-white tracking-tight mb-6 leading-tight"
-          >
-            Make Your Home <br className="md:hidden"/>
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-400 via-secondary-400 to-accent-400">
-              Sparkle & Shine
-            </span>
-          </motion.h1>
-          
-          <motion.p 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 1, delay: 0.4 }}
-            className="text-slate-300 text-lg md:text-xl max-w-2xl mx-auto mb-8 leading-relaxed"
-          >
-            Powerful, eco-friendly formulas designed to tackle the toughest stains while keeping your family safe.
-          </motion.p>
-
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.6 }}
-            className="flex justify-center gap-4"
-          >
-            <a href="#products" className="bg-primary-600 text-white px-8 py-2 rounded-xl font-bold hover:bg-primary-500 transition-all shadow-lg shadow-primary-500/25 hover:scale-105 active:scale-95">
-              Shop Now
-            </a>
-          </motion.div>
+      {/* The three reassurances a first-time buyer actually wants, on their own
+          line rather than floating in a shadowed card. */}
+      <div className="bg-white border-b border-ink/10">
+        <div className="container mx-auto px-4 grid grid-cols-3 divide-x divide-ink/10">
+          {[
+            ['Pay on delivery', 'Cash or transfer'],
+            ['Free delivery', 'Over Rs 3,000'],
+            ['1–3 days', 'Isb & Rwp'],
+          ].map(([title, sub]) => (
+            <div key={title} className="py-4 px-2 text-center">
+              <p className="text-[13px] sm:text-sm font-semibold text-ink leading-tight">{title}</p>
+              <p className="text-[11px] sm:text-xs text-ink/50 mt-0.5">{sub}</p>
+            </div>
+          ))}
         </div>
       </div>
-      {/* --- END UPGRADED HERO SECTION --- */}
 
-      {/* Main Content Area */}
-      <div id="products" className="container mx-auto px-4 -mt-6 relative z-20 scroll-mt-24">
-        
-        {/* Stats Bar */}
-        <div className="bg-white rounded-xl shadow-lg border border-slate-100 p-4 mb-8 flex flex-col md:flex-row items-center justify-between gap-4 animate-fade-in-up">
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            <div className="p-2 bg-yellow-50 rounded-lg"><Star className="w-5 h-5 text-yellow-500 fill-current" /></div>
-            <div>
-              <div className="flex items-baseline gap-1">
-                <span className="font-bold text-slate-900 text-lg">{stats.average}</span>
-                <span className="text-slate-500 text-xs">/ 5.0</span>
-              </div>
-              <p className="text-xs text-slate-500 font-medium">Based on {stats.total} reviews</p>
-            </div>
-          </div>
-          
-          <div className="h-px w-full md:w-px md:h-10 bg-slate-100"></div>
-          
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            <div className="p-2 bg-green-50 rounded-lg"><Truck className="w-5 h-5 text-green-500" /></div>
-            <div>
-              <p className="font-bold text-slate-900 text-sm">Free Shipping</p>
-              <p className="text-xs text-slate-500">On orders over Rs3000</p>
-            </div>
+      {/* ------------------------------------------------------------- THE RANGE */}
+      <section id="products" className="container mx-auto px-4 py-14 sm:py-20 scroll-mt-16">
+        <div className="flex items-end justify-between gap-4 mb-7">
+          <div>
+            <h2 className="font-display font-extrabold text-ink text-3xl sm:text-4xl">The range</h2>
+            <p className="text-ink/55 mt-1.5 text-sm sm:text-base">
+              {products.length || 'Eight'} cleaners, one for every job in the house.
+            </p>
           </div>
 
-          <div className="h-px w-full md:w-px md:h-10 bg-slate-100"></div>
-
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            <div className="p-2 bg-blue-50 rounded-lg"><Shield className="w-5 h-5 text-blue-500" /></div>
-            <div>
-              <p className="font-bold text-slate-900 text-sm">100% Secure</p>
-              <p className="text-xs text-slate-500">Pay on Delivery Available</p>
+          {stats.total > 0 && (
+            <div className="hidden sm:flex items-center gap-2 shrink-0 pb-1">
+              <Star className="w-4 h-4 text-accent-500 fill-current" />
+              <span className="font-semibold text-ink tabular">{stats.average}</span>
+              <span className="text-ink/50 text-sm">from {stats.total} reviews</span>
             </div>
-          </div>
+          )}
         </div>
 
-        {/* Filters & Search Bar */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 sticky top-20 z-30 bg-slate-50/95 backdrop-blur-sm p-2 -mx-2 rounded-xl">
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 w-full md:w-auto no-scrollbar">
-            <button 
-              onClick={() => setSelectedCategory('all')}
-              className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${selectedCategory === 'all' ? 'bg-slate-900 text-white shadow-md' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'}`}
+        <div className="flex items-center gap-2 mb-7 -mx-4 px-4 overflow-x-auto no-scrollbar">
+          <button
+            onClick={() => setSelectedCategory('all')}
+            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+              selectedCategory === 'all'
+                ? 'bg-ink text-white'
+                : 'bg-white text-ink/70 border border-ink/10 hover:border-ink/25'
+            }`}
+          >
+            Everything
+          </button>
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                selectedCategory === cat
+                  ? 'bg-ink text-white'
+                  : 'bg-white text-ink/70 border border-ink/10 hover:border-ink/25'
+              }`}
             >
-              All Products
+              {cat}
             </button>
-            {categories.map(cat => (
-              <button 
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap capitalize transition-all ${selectedCategory === cat ? 'bg-slate-900 text-white shadow-md' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'}`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-2 w-full md:w-auto">
-            <div className="relative flex-1 md:flex-none group">
-              <select 
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="w-full md:w-48 appearance-none bg-white border border-slate-200 text-slate-700 text-sm font-bold py-2.5 pl-4 pr-10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 cursor-pointer shadow-sm hover:border-primary-300 transition-colors"
-              >
-                <option value="newest">Newest Arrivals</option>
-                <option value="price-low">Price: Low to High</option>
-                <option value="price-high">Price: High to Low</option>
-              </select>
-              <ArrowUpDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none group-hover:text-primary-500 transition-colors" />
-            </div>
-            
-            <button 
-              onClick={() => setShowFilters(!showFilters)}
-              className={`p-2.5 rounded-xl border border-slate-200 transition-all ${showFilters ? 'bg-primary-50 border-primary-200 text-primary-600' : 'bg-white text-slate-600 hover:border-primary-300'}`}
-            >
-              <Filter className="w-5 h-5" />
-            </button>
-          </div>
+          ))}
         </div>
 
-        {/* Product Grid */}
         {isLoading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-20">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8">
             {[...Array(8)].map((_, i) => (
-              <div key={i} className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 h-80 animate-pulse">
-                <div className="w-full h-40 bg-slate-100 rounded-xl mb-4"></div>
-                <div className="h-4 bg-slate-100 rounded w-3/4 mb-2"></div>
-                <div className="h-4 bg-slate-100 rounded w-1/2"></div>
+              <div key={i}>
+                <div className="aspect-[4/5] rounded-3xl bg-ink/[0.06] animate-pulse" />
+                <div className="h-3 w-20 bg-ink/[0.06] rounded mt-3 animate-pulse" />
+                <div className="h-4 w-full bg-ink/[0.06] rounded mt-2 animate-pulse" />
               </div>
             ))}
+          </div>
+        ) : visibleProducts.length === 0 ? (
+          <div className="py-20 text-center">
+            <h3 className="font-display font-bold text-xl text-ink">Nothing in this category yet</h3>
+            <button
+              onClick={() => setSelectedCategory('all')}
+              className="mt-3 text-primary-700 font-semibold hover:underline"
+            >
+              Show everything
+            </button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-20">
-            {getFilteredProducts().map((product) => (
-              <ProductCard key={product.id} product={product} />
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8">
+            {visibleProducts.map((product, i) => (
+              <ProductCard key={product.id} product={product} index={i} />
             ))}
-            {getFilteredProducts().length === 0 && (
-              <div className="col-span-full py-20 text-center">
-                <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Filter className="w-10 h-10 text-slate-400" />
-                </div>
-                <h3 className="text-xl font-bold text-slate-900">No products found</h3>
-                <p className="text-slate-500 mt-2">Try changing your category or filters.</p>
-                <button onClick={() => {setSelectedCategory('all'); setSortBy('newest');}} className="mt-4 text-primary-600 font-bold hover:underline">Clear Filters</button>
-              </div>
-            )}
           </div>
         )}
-      </div>
 
-      {/* Floating WhatsApp Button */}
-      <a
-        href="https://wa.me/923231550147?text=Asalamo%20Alikum%2C%20I%20want%20to%20order..."
-        target="_blank"
-        rel="noopener noreferrer"
-        className="fixed bottom-24 right-6 z-40 bg-[#25D366] text-white p-3.5 rounded-full shadow-xl hover:scale-110 transition-transform duration-300 flex items-center justify-center"
-        aria-label="Chat on WhatsApp"
-      >
-        <MessageCircle className="w-6 h-6 fill-current" />
-      </a>
-      
-      {/* Bottom CTA for Bulk Orders */}
-      <div className="bg-slate-900 py-12 md:py-16 mt-10 relative overflow-hidden">
-          <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-secondary-500/20 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-primary-500/20 rounded-full blur-3xl"></div>
-          
-          <div className="container mx-auto px-4 relative z-10 text-center">
-            <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
-              Need Bulk Order for Business?
-            </h3>
-            <p className="text-slate-300 mb-8 max-w-2xl mx-auto">
-              Contact us for wholesale pricing, custom packaging, and commercial cleaning solutions.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        {products.length > 0 && (
+          <div className="mt-8 flex justify-end">
+            <label className="text-sm text-ink/55 flex items-center gap-2">
+              Sort
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="bg-white border border-ink/10 rounded-full px-3 py-2 text-sm font-medium text-ink"
+              >
+                <option value="newest">Newest</option>
+                <option value="price-low">Price, low to high</option>
+                <option value="price-high">Price, high to low</option>
+              </select>
+            </label>
+          </div>
+        )}
+      </section>
+
+      {/* ------------------------------------------------- CLAIMS / COLOUR FIELD */}
+      <section ref={claimsRef} className="relative bg-ink overflow-hidden">
+        {!reduceMotion &&
+          CLAIMS.map((claim, i) => (
+            <motion.div
+              key={`glow-${claim.heading}`}
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 h-[70svh] blur-[90px]"
+              style={{
+                opacity: glows[i],
+                top: `${i * 30}%`,
+                background: `radial-gradient(60% 50% at 50% 50%, ${claim.color} 0%, transparent 70%)`,
+              }}
+            />
+          ))}
+
+        <div className="relative container mx-auto px-4 py-16 sm:py-24">
+          <div className="max-w-3xl">
+            {CLAIMS.map((claim) => (
+              <div
+                key={claim.heading}
+                className="min-h-[42svh] flex flex-col justify-center border-t border-white/20 py-10"
+              >
+                <span
+                  className="w-12 h-1.5 rounded-full mb-5"
+                  style={{ backgroundColor: claim.color }}
+                  aria-hidden
+                />
+                <h3 className="font-display font-extrabold text-white text-[clamp(1.75rem,6.5vw,3rem)] leading-[1.02]">
+                  {claim.heading}
+                </h3>
+                <p className="mt-3 text-white/70 text-base sm:text-lg leading-relaxed max-w-lg">
+                  {claim.body}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ------------------------------------------------------------ BULK ORDERS */}
+      <section className="bg-surface py-16 sm:py-24">
+        <div className="container mx-auto px-4">
+          <div className="rounded-[2rem] bg-white border border-ink/10 p-8 sm:p-14">
+            <div className="max-w-lg">
+              <h2 className="font-display font-extrabold text-ink text-3xl sm:text-4xl leading-tight">
+                Buying for an office, a mosque or a restaurant?
+              </h2>
+              <p className="mt-4 text-ink/60 leading-relaxed">
+                We do wholesale pricing, bulk packs and regular scheduled deliveries.
+                Send us a message and we will put a quote together.
+              </p>
               <a
-                href="https://wa.me/923231550147?text=I'm%20interested%20in%20bulk%20order%20for%20business..."
+                href={`${WHATSAPP}?text=I'm%20interested%20in%20bulk%20order%20for%20business...`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-8 py-3 bg-primary-600 text-white font-bold rounded-xl hover:bg-primary-500 shadow-lg shadow-primary-900/20 transition-all inline-flex items-center justify-center gap-2"
+                className="mt-7 inline-flex items-center gap-2 bg-primary-600 text-white font-semibold px-6 py-3.5 rounded-full hover:bg-primary-700 active:scale-95 transition-all"
               >
-                <MessageCircle className="w-5 h-5" />
-                WhatsApp for Bulk Order
+                <MessageCircle className="w-4 h-4" />
+                Ask for bulk pricing
               </a>
             </div>
           </div>
-      </div>
+        </div>
+      </section>
+
+      {/* Sits above the sticky footer area on mobile without covering content */}
+      <a
+        href={`${WHATSAPP}?text=Asalamo%20Alikum%2C%20I%20want%20to%20order...`}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Chat with Onium on WhatsApp"
+        className="fixed bottom-5 right-5 z-40 w-14 h-14 rounded-full bg-[#25D366] text-white grid place-items-center shadow-xl hover:scale-105 active:scale-95 transition-transform"
+      >
+        <MessageCircle className="w-6 h-6 fill-current" />
+      </a>
     </div>
   );
 }

@@ -1,82 +1,99 @@
 import { Link } from 'react-router-dom';
-import { Facebook, Instagram, Twitter, MapPin, Phone, Mail, ArrowRight } from 'lucide-react';
+import { Facebook, Instagram, MapPin, Phone, Mail } from 'lucide-react';
+
+const LOGO = 'https://res.cloudinary.com/dztldh7o2/image/upload/v1769171993/Logo_ft1lsj.png';
+
+const SHOP = [
+  { label: 'All products', href: '/#products' },
+  { label: 'Reviews', href: '/reviews' },
+  { label: 'Track your order', href: '/track-order' },
+  { label: 'About Onium', href: '/about' },
+];
+
+const HELP = [
+  { label: 'Contact us', href: '/contact' },
+  { label: 'Shipping policy', href: '/shipping-policy' },
+  { label: 'Returns & refunds', href: '/return-policy' },
+  { label: 'FAQs', href: '/faq' },
+];
 
 export default function Footer() {
   return (
-    <footer className="bg-slate-900 text-slate-300 pt-16 pb-8">
-      <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
-          
-          {/* Brand Column */}
-          <div>
-            <div className="flex items-center gap-2 mb-6">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-lg flex items-center justify-center text-white font-bold text-xl">
-                O
-              </div>
-              <span className="text-2xl font-bold text-white tracking-tight">Onium</span>
-            </div>
-            <p className="text-slate-400 mb-6 leading-relaxed">
-              Premium eco-friendly cleaning solutions for a safer, sparklier home. 
-              Join the cleaning revolution today.
+    <footer className="bg-ink text-white/70">
+      <div className="container mx-auto px-4 pt-14 pb-8">
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-12">
+
+          <div className="lg:col-span-1">
+            <img src={LOGO} alt="Onium" className="h-9 w-auto object-contain" />
+            <p className="mt-4 text-sm leading-relaxed max-w-xs">
+              Everyday cleaning products made in Pakistan, without the harsh chemicals.
             </p>
-            <div className="flex gap-4">
-              <a href="#" className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all">
-                <Facebook className="w-5 h-5" />
+            <div className="flex gap-2 mt-5">
+              <a
+                href="#"
+                aria-label="Onium on Facebook"
+                className="w-10 h-10 rounded-full bg-white/10 grid place-items-center hover:bg-primary-600 hover:text-white transition-colors"
+              >
+                <Facebook className="w-[18px] h-[18px]" />
               </a>
-              <a href="#" className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all">
-                <Instagram className="w-5 h-5" />
-              </a>
-              <a href="#" className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all">
-                <Twitter className="w-5 h-5" />
+              <a
+                href="#"
+                aria-label="Onium on Instagram"
+                className="w-10 h-10 rounded-full bg-white/10 grid place-items-center hover:bg-primary-600 hover:text-white transition-colors"
+              >
+                <Instagram className="w-[18px] h-[18px]" />
               </a>
             </div>
           </div>
 
-          {/* Quick Links */}
-          <div>
-            <h3 className="text-white font-bold text-lg mb-6">Quick Links</h3>
-            <ul className="space-y-4">
-              <li><Link to="/" className="hover:text-primary-400 transition-colors flex items-center gap-2"><ArrowRight className="w-4 h-4" /> Home</Link></li>
-              {/* UPDATED: Points to #products ID on Home page */}
-              <li><a href="/#products" className="hover:text-primary-400 transition-colors flex items-center gap-2"><ArrowRight className="w-4 h-4" /> Shop All</a></li>
-              <li><Link to="/about" className="hover:text-primary-400 transition-colors flex items-center gap-2"><ArrowRight className="w-4 h-4" /> About Us</Link></li>
-              <li><Link to="/track-order" className="hover:text-primary-400 transition-colors flex items-center gap-2"><ArrowRight className="w-4 h-4" /> Track Order</Link></li>
+          <nav aria-label="Shop">
+            <h2 className="font-display font-bold text-white text-sm mb-4">Shop</h2>
+            <ul className="space-y-2.5 text-sm">
+              {SHOP.map((item) => (
+                <li key={item.label}>
+                  <a href={item.href} className="hover:text-white transition-colors">{item.label}</a>
+                </li>
+              ))}
             </ul>
-          </div>
+          </nav>
 
-          {/* Customer Service */}
-          <div>
-            <h3 className="text-white font-bold text-lg mb-6">Customer Care</h3>
-            <ul className="space-y-4">
-              <li><Link to="/contact" className="hover:text-primary-400 transition-colors">Contact Us</Link></li>
-              <li><Link to="/shipping-policy" className="hover:text-primary-400 transition-colors">Shipping Policy</Link></li>
-              <li><Link to="/return-policy" className="hover:text-primary-400 transition-colors">Returns & Refunds</Link></li>
-              <li><Link to="/faq" className="hover:text-primary-400 transition-colors">FAQs</Link></li>
+          <nav aria-label="Help">
+            <h2 className="font-display font-bold text-white text-sm mb-4">Help</h2>
+            <ul className="space-y-2.5 text-sm">
+              {HELP.map((item) => (
+                <li key={item.label}>
+                  <Link to={item.href} className="hover:text-white transition-colors">{item.label}</Link>
+                </li>
+              ))}
             </ul>
-          </div>
+          </nav>
 
-          {/* Contact Info */}
           <div>
-            <h3 className="text-white font-bold text-lg mb-6">Get in Touch</h3>
-            <ul className="space-y-4">
+            <h2 className="font-display font-bold text-white text-sm mb-4">Get in touch</h2>
+            <ul className="space-y-3 text-sm">
               <li className="flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-primary-500 flex-shrink-0 mt-1" />
+                <MapPin className="w-4 h-4 text-leaf-500 shrink-0 mt-0.5" />
                 <span>HM Towers, Office 402, 5th Floor, Gulberg Green, Islamabad</span>
               </li>
               <li className="flex items-center gap-3">
-                <Phone className="w-5 h-5 text-primary-500 flex-shrink-0" />
-                <span>+92 323 1550147</span>
+                <Phone className="w-4 h-4 text-leaf-500 shrink-0" />
+                <a href="tel:+923231550147" className="hover:text-white transition-colors tabular">
+                  +92 323 1550147
+                </a>
               </li>
               <li className="flex items-center gap-3">
-                <Mail className="w-5 h-5 text-primary-500 flex-shrink-0" />
-                <span>rabta@onium.store</span>
+                <Mail className="w-4 h-4 text-leaf-500 shrink-0" />
+                <a href="mailto:rabta@onium.store" className="hover:text-white transition-colors break-all">
+                  rabta@onium.store
+                </a>
               </li>
             </ul>
           </div>
         </div>
 
-        <div className="border-t border-slate-800 pt-8 text-center text-sm text-slate-500">
-          <p>&copy; {new Date().getFullYear()} Onium Store. All rights reserved.</p>
+        <div className="border-t border-white/10 mt-12 pt-6 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between text-xs text-white/45">
+          <p>&copy; {new Date().getFullYear()} Onium Store</p>
+          <p>Delivering in Islamabad &amp; Rawalpindi</p>
         </div>
       </div>
     </footer>
