@@ -1,8 +1,12 @@
-import { useEffect, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, Package, CheckCircle, Clock, Truck, XCircle, MessageCircle } from 'lucide-react';
+import { Check, MessageCircle, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { formatRs } from '../lib/format';
+import { whatsappWith } from '../lib/contact';
 import SEO from '../components/SEO';
+import PageIntro from '../components/PageIntro';
+import Field from '../components/Field';
 
 /** What get_order_by_tracking returns: just enough to show progress. */
 interface TrackedOrder {
@@ -12,143 +16,178 @@ interface TrackedOrder {
   total_price: number;
 }
 
+/** The order statuses the admin panel sets, in the order they happen. */
+const STEPS = [
+  { status: 'pending', label: 'Order received', detail: "We've got your order and will message you to arrange delivery." },
+  { status: 'processing', label: 'Being prepared', detail: "We're packing your order." },
+  { status: 'shipped', label: 'On the way', detail: 'A rider has your order.' },
+  { status: 'delivered', label: 'Delivered', detail: 'Your order has arrived.' },
+];
+
+const cleanCode = (value: string) => value.replace(/^#/, '').trim().toUpperCase();
+
 export default function TrackOrder() {
   // The order confirmation links here as /track-order?order=CODE.
   const [searchParams] = useSearchParams();
   const linkedCode = searchParams.get('order') ?? '';
-  const [orderId, setOrderId] = useState(linkedCode);
-  const [orderStatus, setOrderStatus] = useState<TrackedOrder | null>(null);
+  const [code, setCode] = useState(linkedCode);
+  const [order, setOrder] = useState<TrackedOrder | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleTrack = (e: React.FormEvent) => {
-    e.preventDefault();
-    track(orderId);
-  };
-
-  useEffect(() => {
-    if (linkedCode) track(linkedCode);
-  }, [linkedCode]);
-
-  async function track(code: string) {
-    if (!code.trim()) return;
-
+  async function track(value: string) {
+    const cleaned = cleanCode(value);
+    setOrder(null);
+    if (cleaned.length < 8) {
+      setError('Order numbers are 8 characters, like 12AB34CD.');
+      return;
+    }
     setLoading(true);
     setError('');
-    setOrderStatus(null);
-
-    // Remove '#' if user typed it, and trim whitespace
-    const cleanId = code.replace(/^#/, '').trim();
-
     try {
-      // FIX: Use the 'rpc' method to call our database function
-      // This is necessary because we are matching a partial UUID (Text) against a UUID column
-      const { data, error } = await supabase
-        .rpc('get_order_by_tracking', { code: cleanId })
+      const { data, error: rpcError } = await supabase
+        .rpc('get_order_by_tracking', { code: cleaned })
         .maybeSingle<TrackedOrder>();
-
-      if (error) throw error;
-      
-      if (!data) {
-        setError('Order not found. Please check your Tracking Code.');
-        return;
-      }
-
-      setOrderStatus(data);
+      if (rpcError) throw rpcError;
+      if (!data) setError(`We couldn't find order #${cleaned}. Check the number on your confirmation email.`);
+      else setOrder(data);
     } catch (err) {
       console.error(err);
-      setError('Order not found or invalid code.');
+      setError("Couldn't look up that order. Check your connection and try again.");
     } finally {
       setLoading(false);
     }
   }
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'delivered': return <CheckCircle className="w-12 h-12 text-green-500" />;
-      case 'shipped': return <Truck className="w-12 h-12 text-primary-500" />;
-      case 'cancelled': return <XCircle className="w-12 h-12 text-red-500" />;
-      default: return <Clock className="w-12 h-12 text-accent-500" />;
-    }
+  useEffect(() => {
+    if (linkedCode) track(linkedCode);
+  }, [linkedCode]);
+
+  const handleSubmit = (event: FormEvent) => {
+    event.preventDefault();
+    track(code);
   };
 
   return (
-    <div className="min-h-[70vh] bg-slate-50 flex flex-col items-center justify-center p-4">
-      <SEO title="Track Order" description="Track the status of your Onium order." />
-      <div className="bg-white p-8 rounded-3xl shadow-xl w-full max-w-md border border-slate-100">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-primary-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Package className="w-8 h-8 text-primary-600" />
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900">Track Your Order</h1>
-          <p className="text-slate-500 mt-2 text-sm">Enter your Tracking Code (e.g. #12AB34CD)</p>
-        </div>
+    <div>
+      <SEO title="Track your order" description="Check the status of your Onium order." noIndex />
+      <PageIntro title="Track your order" lede="Enter the order number from your confirmation." />
 
-        <form onSubmit={handleTrack} className="mb-8">
-          <div className="relative">
-            <input
-              type="text"
-              value={orderId}
-              onChange={(e) => setOrderId(e.target.value)}
-              placeholder="e.g. #12EEB7BE"
-              className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-all font-mono text-sm uppercase"
-            />
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-          </div>
-          <button
-            disabled={loading}
-            className="w-full mt-4 bg-slate-900 text-white py-4 rounded-xl font-bold hover:bg-slate-800 transition-colors disabled:opacity-50"
+      <div className="container mx-auto px-4 py-10 md:py-16 lg:grid lg:grid-cols-12 lg:gap-16">
+        <form onSubmit={handleSubmit} noValidate className="lg:col-span-5 grid gap-4 self-start">
+          <Field
+            id="track-code"
+            label="Order number"
+            hint="For example #12AB34CD."
+            error={error && !order ? error : undefined}
           >
-            {loading ? 'Searching...' : 'Track Order'}
+            {(props) => (
+              <input
+                {...props}
+                type="text"
+                autoCapitalize="characters"
+                autoComplete="off"
+                spellCheck={false}
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                className={`${props.className} uppercase tracking-wide`}
+              />
+            )}
+          </Field>
+          <button
+            type="submit"
+            disabled={loading}
+            className="min-h-[52px] rounded-full bg-primary-600 text-white font-semibold hover:bg-primary-700 disabled:opacity-70 transition-colors"
+          >
+            {loading ? 'Looking it up…' : 'Track order'}
           </button>
         </form>
 
-        {error && (
-          <div className="p-4 bg-red-50 text-red-600 rounded-xl text-center text-sm font-bold border border-red-100">
-            {error}
-          </div>
-        )}
-
-        {orderStatus && (
-          <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200 animate-fade-in text-center">
-            <div className="flex flex-col items-center mb-6">
-              {getStatusIcon(orderStatus.status)}
-              <h3 className="text-xl font-bold text-slate-900 mt-3 capitalize">
-                {orderStatus.status}
-              </h3>
-              <p className="text-sm text-slate-500">
-                Placed on {new Date(orderStatus.created_at).toLocaleDateString()}
-              </p>
-            </div>
-            
-            <div className="space-y-3 pt-6 border-t border-slate-200 mb-6">
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Tracking Code</span>
-                <span className="font-mono text-slate-900 font-bold">
-                  #{orderStatus.id.slice(0,8).toUpperCase()}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Total Amount</span>
-                <span className="font-bold text-slate-900">
-                  Rs{orderStatus.total_price}
-                </span>
-              </div>
-            </div>
-
-
-            <a 
-              href={`https://wa.me/923231550147?text=Asalamo%20Alikum%2C%20I%20have%20a%20query%20about%20my%20order%20%23${orderStatus.id.slice(0,8).toUpperCase()}`} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 w-full bg-green-500 text-white py-3 rounded-xl font-bold hover:bg-green-600 transition-colors shadow-lg"
-            >
-              <MessageCircle className="w-5 h-5" />
-              Contact Support
-            </a>
-          </div>
-        )}
+        <div className="lg:col-span-7 mt-10 lg:mt-0" aria-live="polite">
+          {order && <OrderProgress order={order} />}
+        </div>
       </div>
     </div>
+  );
+}
+
+function OrderProgress({ order }: { order: TrackedOrder }) {
+  const code = order.id.slice(0, 8).toUpperCase();
+  const cancelled = order.status === 'cancelled';
+  const current = Math.max(0, STEPS.findIndex((step) => step.status === order.status));
+  const placed = new Date(order.created_at).toLocaleDateString('en-PK', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  return (
+    <section aria-labelledby="order-heading" className="rounded-[28px] bg-white p-6 md:p-8">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h2 id="order-heading" className="font-display font-extrabold text-ink text-2xl md:text-3xl tabular tracking-wide">
+          Order #{code}
+        </h2>
+        <p className="text-sm text-ink/70">Placed {placed}</p>
+      </div>
+      <p className="mt-1 text-[15px] text-ink/70">
+        Total <span className="font-semibold text-ink tabular">{formatRs(Number(order.total_price))}</span>, pay on delivery
+      </p>
+
+      {cancelled ? (
+        <div className="mt-6 flex items-start gap-3 rounded-2xl bg-clay-50 p-5">
+          <span aria-hidden className="shrink-0 w-8 h-8 rounded-full bg-clay-700 text-white grid place-items-center">
+            <X className="w-4 h-4" strokeWidth={3} />
+          </span>
+          <div>
+            <p className="font-semibold text-clay-800">This order was cancelled</p>
+            <p className="mt-1 text-[15px] text-ink/75">If that's unexpected, message us and we'll sort it out.</p>
+          </div>
+        </div>
+      ) : (
+        <ol className="mt-7">
+          {STEPS.map((step, i) => {
+            const done = i < current || order.status === 'delivered';
+            const isCurrent = i === current && order.status !== 'delivered';
+            const last = i === STEPS.length - 1;
+            return (
+              <li key={step.status} className="relative flex gap-4 pb-6 last:pb-0" aria-current={isCurrent ? 'step' : undefined}>
+                {!last && (
+                  <span
+                    aria-hidden
+                    className={`absolute left-[15px] top-8 bottom-0 w-0.5 ${i < current ? 'bg-primary-600' : 'bg-ink/10'}`}
+                  />
+                )}
+                <span
+                  aria-hidden
+                  className={`relative shrink-0 w-8 h-8 rounded-full grid place-items-center ${
+                    done
+                      ? 'bg-primary-600 text-white'
+                      : isCurrent
+                        ? 'bg-white ring-[3px] ring-primary-600'
+                        : 'bg-white ring-2 ring-ink/15'
+                  }`}
+                >
+                  {done ? <Check className="w-4 h-4" strokeWidth={3} /> : isCurrent && <span className="w-2.5 h-2.5 rounded-full bg-primary-600" />}
+                </span>
+                <div className="pt-1">
+                  <p className={`font-semibold ${done || isCurrent ? 'text-ink' : 'text-ink/60'}`}>
+                    {step.label}
+                    <span className="sr-only">{done ? ', done' : isCurrent ? ', current step' : ', not yet'}</span>
+                  </p>
+                  {isCurrent && <p className="mt-0.5 text-[15px] text-ink/70">{step.detail}</p>}
+                  {order.status === 'delivered' && last && <p className="mt-0.5 text-[15px] text-ink/70">{step.detail}</p>}
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+
+      <a
+        href={whatsappWith(`Assalam o Alaikum, I have a question about my order #${code}.`)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-8 inline-flex w-full sm:w-auto items-center justify-center gap-2 min-h-12 px-6 rounded-full border border-ink/15 text-ink font-semibold hover:bg-surface transition-colors"
+      >
+        <MessageCircle className="w-[18px] h-[18px] text-[#1DA851]" aria-hidden />
+        Ask about this order
+      </a>
+    </section>
   );
 }

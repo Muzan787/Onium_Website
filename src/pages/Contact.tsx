@@ -1,183 +1,162 @@
-import { useState } from 'react';
-import { Mail, Phone, MapPin, Send, MessageCircle } from 'lucide-react';
+import { ReactNode, useState } from 'react';
+import { Mail, MapPin, MessageCircle, Phone } from 'lucide-react';
 import SEO from '../components/SEO';
-import toast from 'react-hot-toast';
+import PageIntro from '../components/PageIntro';
+import Field from '../components/Field';
+import { ADDRESS, EMAIL, MAP_URL, PHONE_DISPLAY, PHONE_HREF, SUPPORT_HOURS, WHATSAPP_URL, whatsappWith } from '../lib/contact';
+
+const TOPICS = ['An order', 'A product question', 'A bulk order', 'Something else'];
 
 export default function Contact() {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    subject: '',
-    message: ''
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [name, setName] = useState('');
+  const [topic, setTopic] = useState(TOPICS[0]);
+  const [message, setMessage] = useState('');
+  const [showError, setShowError] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    
-    // Simulate sending (In a real app, you'd send this to Supabase or EmailJS)
-    setTimeout(() => {
-      toast.success('Message sent successfully! We will get back to you soon.');
-      setFormData({ name: '', email: '', subject: '', message: '' });
-      setIsSubmitting(false);
-    }, 1500);
+  // There is no inbox behind this form, so rather than pretend to send it, the
+  // message is handed to WhatsApp or the customer's email app, ready to go.
+  const compose = () =>
+    [`Hi Onium${name.trim() ? `, this is ${name.trim()}` : ''}.`, `About: ${topic.toLowerCase()}`, '', message.trim()].join('\n');
+
+  const send = (via: 'whatsapp' | 'email') => {
+    if (!message.trim()) {
+      setShowError(true);
+      document.getElementById('contact-message')?.focus();
+      return;
+    }
+    const url =
+      via === 'whatsapp'
+        ? whatsappWith(compose())
+        : `mailto:${EMAIL}?subject=${encodeURIComponent(`Question about ${topic.toLowerCase()}`)}&body=${encodeURIComponent(compose())}`;
+    window.open(url, via === 'whatsapp' ? '_blank' : '_self', 'noopener');
   };
 
-  const contactInfo = [
-    {
-      icon: <Phone className="w-6 h-6 text-primary-500" />,
-      title: "Phone & WhatsApp",
-      value: "+92 323 1550147",
-      link: "https://wa.me/923231550147",
-      action: "Chat now"
-    },
-    {
-      icon: <Mail className="w-6 h-6 text-secondary-500" />,
-      title: "Email Us",
-      value: "support@onium.store",
-      link: "mailto:support@onium.store",
-      action: "Send email"
-    },
-    {
-      icon: <MapPin className="w-6 h-6 text-accent-500" />,
-      title: "Location",
-      value: "Islamabad, Pakistan",
-      link: "#",
-      action: "View map"
-    }
-  ];
-
   return (
-    <div className="min-h-screen bg-slate-50 py-12">
-      <SEO title="Contact Us" description="Get in touch with Onium regarding orders, products, or wholesale inquiries." />
-      
-      <div className="container mx-auto px-4 max-w-6xl">
-        <div className="text-center mb-16">
-          <h1 className="text-3xl md:text-5xl font-bold text-slate-900 mb-4">Get in Touch</h1>
-          <p className="text-slate-500 text-lg max-w-2xl mx-auto">
-            Have questions about our products or your order? We're here to help. Reach out to us via WhatsApp, email, or the form below.
+    <div>
+      <SEO title="Contact us" description="Reach Onium on WhatsApp, by phone or email about orders, products or bulk pricing." />
+      <PageIntro title="Talk to us" lede={`Orders, products and bulk quotes. We're on WhatsApp ${SUPPORT_HOURS}.`}>
+        <a
+          href={WHATSAPP_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex w-full sm:w-auto items-center justify-center gap-2 min-h-[52px] px-7 rounded-full bg-[#25D366] text-ink font-semibold hover:brightness-95 transition-[filter]"
+        >
+          <MessageCircle className="w-[18px] h-[18px]" aria-hidden />
+          Chat on WhatsApp
+        </a>
+      </PageIntro>
+
+      <div className="container mx-auto px-4 py-12 md:py-20 lg:grid lg:grid-cols-12 lg:gap-16">
+        <section aria-labelledby="reach-heading" className="lg:col-span-5">
+          <h2 id="reach-heading" className="font-display font-extrabold text-ink text-[28px] md:text-4xl">
+            Other ways to reach us
+          </h2>
+          <ul className="mt-6 border-t border-ink/10">
+            <ContactRow icon={<Phone className="w-5 h-5" />} label="Call" value={PHONE_DISPLAY} href={PHONE_HREF} />
+            <ContactRow icon={<Mail className="w-5 h-5" />} label="Email" value={EMAIL} href={`mailto:${EMAIL}`} />
+            <ContactRow icon={<MapPin className="w-5 h-5" />} label="Visit" value={ADDRESS} href={MAP_URL} external />
+          </ul>
+        </section>
+
+        <section aria-labelledby="write-heading" className="lg:col-span-7 mt-14 lg:mt-0">
+          <h2 id="write-heading" className="font-display font-extrabold text-ink text-[28px] md:text-4xl">
+            Write to us
+          </h2>
+          <p className="mt-2 text-[16px] text-ink/70">
+            Your message opens in WhatsApp or your email app, ready to send.
           </p>
-        </div>
-
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Contact Info Cards */}
-          <div className="space-y-4 lg:col-span-1">
-            {contactInfo.map((info, idx) => (
-              <a 
-                key={idx} 
-                href={info.link}
-                target={info.link.startsWith('http') ? '_blank' : undefined}
-                rel="noreferrer"
-                className="block bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-primary-200 transition-all group"
+          <form
+            noValidate
+            onSubmit={(event) => {
+              event.preventDefault();
+              send('whatsapp');
+            }}
+            className="mt-6 grid gap-5"
+          >
+            <Field id="contact-name" label="Your name" optional>
+              {(props) => (
+                <input {...props} type="text" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />
+              )}
+            </Field>
+            <Field id="contact-topic" label="What's it about?">
+              {(props) => (
+                <select {...props} value={topic} onChange={(e) => setTopic(e.target.value)}>
+                  {TOPICS.map((t) => (
+                    <option key={t}>{t}</option>
+                  ))}
+                </select>
+              )}
+            </Field>
+            <Field
+              id="contact-message"
+              label="Message"
+              multiline
+              error={showError && !message.trim() ? 'Write your message first.' : undefined}
+            >
+              {(props) => (
+                <textarea
+                  {...props}
+                  rows={5}
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="If it's about an order, include your order number."
+                />
+              )}
+            </Field>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                type="submit"
+                className="inline-flex items-center justify-center gap-2 min-h-[52px] px-7 rounded-full bg-[#25D366] text-ink font-semibold hover:brightness-95 transition-[filter]"
               >
-                <div className="flex items-start gap-4">
-                  <div className="p-3 bg-slate-50 rounded-xl group-hover:bg-primary-50 transition-colors">
-                    {info.icon}
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 mb-1">{info.title}</h3>
-                    <p className="text-slate-600 font-medium mb-2">{info.value}</p>
-                    <span className="text-xs font-bold text-primary-600 flex items-center gap-1">
-                      {info.action} <span className="group-hover:translate-x-1 transition-transform">→</span>
-                    </span>
-                  </div>
-                </div>
-              </a>
-            ))}
-
-            {/* Quick WhatsApp Box */}
-            <div className="bg-gradient-to-br from-green-500 to-emerald-600 p-6 rounded-2xl text-white shadow-lg mt-8">
-              <h3 className="font-bold text-xl mb-2 flex items-center gap-2">
-                <MessageCircle className="w-6 h-6" /> Quick Support
-              </h3>
-              <p className="text-green-50 text-sm mb-4">
-                Need an immediate response? Our WhatsApp support is active 9 AM - 9 PM daily.
-              </p>
-              <a 
-                href="https://wa.me/923231550147" 
-                target="_blank" 
-                rel="noreferrer"
-                className="block w-full py-2.5 bg-white text-green-600 rounded-xl text-center font-bold hover:bg-green-50 transition-colors"
+                <MessageCircle className="w-[18px] h-[18px]" aria-hidden />
+                Send on WhatsApp
+              </button>
+              <button
+                type="button"
+                onClick={() => send('email')}
+                className="inline-flex items-center justify-center gap-2 min-h-[52px] px-7 rounded-full border border-ink/15 text-ink font-semibold hover:bg-white transition-colors"
               >
-                Chat on WhatsApp
-              </a>
+                <Mail className="w-[18px] h-[18px]" aria-hidden />
+                Send by email
+              </button>
             </div>
-          </div>
-
-          {/* Contact Form */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 md:p-8">
-              <h2 className="text-2xl font-bold text-slate-900 mb-6">Send a Message</h2>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Your Name</label>
-                    <input 
-                      type="text" 
-                      required 
-                      value={formData.name}
-                      onChange={(e) => setFormData({...formData, name: e.target.value})}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary-500 outline-none transition-all"
-                      placeholder="John Doe"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Email Address</label>
-                    <input 
-                      type="email" 
-                      required 
-                      value={formData.email}
-                      onChange={(e) => setFormData({...formData, email: e.target.value})}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary-500 outline-none transition-all"
-                      placeholder="john@example.com"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Subject</label>
-                  <select 
-                    value={formData.subject}
-                    onChange={(e) => setFormData({...formData, subject: e.target.value})}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary-500 outline-none transition-all"
-                  >
-                    <option value="" disabled>Select a topic</option>
-                    <option value="Order Status">Order Status Inquiry</option>
-                    <option value="Product Question">Product Question</option>
-                    <option value="Bulk Order">Bulk Order Request</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Message</label>
-                  <textarea 
-                    required 
-                    rows={5}
-                    value={formData.message}
-                    onChange={(e) => setFormData({...formData, message: e.target.value})}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary-500 outline-none transition-all resize-none"
-                    placeholder="How can we help you today?"
-                  />
-                </div>
-
-                <button 
-                  type="submit" 
-                  disabled={isSubmitting}
-                  className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-lg disabled:opacity-70"
-                >
-                  {isSubmitting ? 'Sending...' : (
-                    <>
-                      Send Message <Send className="w-4 h-4" />
-                    </>
-                  )}
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
+          </form>
+        </section>
       </div>
     </div>
+  );
+}
+
+function ContactRow({
+  icon,
+  label,
+  value,
+  href,
+  external,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  href: string;
+  external?: boolean;
+}) {
+  return (
+    <li className="border-b border-ink/10">
+      <a
+        href={href}
+        {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+        className="group flex items-start gap-4 py-5"
+      >
+        <span aria-hidden className="shrink-0 w-11 h-11 rounded-full bg-white text-primary-600 grid place-items-center">
+          {icon}
+        </span>
+        <span className="min-w-0">
+          <span className="block text-sm text-ink/70">{label}</span>
+          <span className="block mt-0.5 text-[17px] font-semibold text-ink group-hover:text-primary-700 transition-colors break-words">
+            {value}
+          </span>
+        </span>
+      </a>
+    </li>
   );
 }

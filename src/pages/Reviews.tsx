@@ -1,99 +1,135 @@
-import { useEffect, useState } from 'react';
-import { Star, Send, User, Calendar, Upload, ThumbsUp, Image as ImageIcon } from 'lucide-react';
-import { supabase, Review } from '../lib/supabase';
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { supabase, Product, Review } from '../lib/supabase';
+import { describeTitle } from '../lib/productInfo';
 import SEO from '../components/SEO';
+import PageIntro from '../components/PageIntro';
+import Stars from '../components/Stars';
+import ReviewForm from '../components/ReviewForm';
 
 export default function Reviews() {
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [formData, setFormData] = useState({ name: '', rating: 5, comment: '' });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [message, setMessage] = useState('');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [submittedAs, setSubmittedAs] = useState<string | null>(null);
 
-  useEffect(() => { fetchReviews(); }, []);
+  useEffect(() => {
+    Promise.all([
+      supabase.from('reviews').select('*').eq('is_approved', true).order('created_at', { ascending: false }),
+      supabase.from('products').select('*').order('created_at'),
+    ]).then(([reviewResult, productResult]) => {
+      setReviews(reviewResult.data ?? []);
+      setProducts(productResult.data ?? []);
+      setIsLoading(false);
+    });
+  }, []);
 
-  const fetchReviews = async () => {
-    const { data } = await supabase.from('reviews').select('*').eq('is_approved', true).order('created_at', { ascending: false });
-    setReviews(data || []);
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) { setSelectedFile(file); setPreviewUrl(URL.createObjectURL(file)); }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    let uploadedImageUrl = "";
-    if (selectedFile) {
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-      formData.append('upload_preset', 'OniumReviews');
-      try {
-        const res = await fetch(`https://api.cloudinary.com/v1_1/dztldh7o2/image/upload`, { method: 'POST', body: formData });
-        const data = await res.json();
-        uploadedImageUrl = data.secure_url;
-      } catch (e) { console.error(e); }
-    }
-    const { error } = await supabase.from('reviews').insert([{ customer_name: formData.name, rating: formData.rating, comment: formData.comment, image_url: uploadedImageUrl || null }]);
-    if (!error) { setMessage('Review submitted for approval!'); setFormData({ name: '', rating: 5, comment: '' }); setSelectedFile(null); setPreviewUrl(null); setTimeout(() => fetchReviews(), 2000); }
-    setIsSubmitting(false);
-  };
+  const productsById = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
+  const average = reviews.length ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : 0;
 
   return (
-    <div className="min-h-screen bg-slate-50 py-12">
-      <SEO title="Reviews" description="See what our customers are saying about Onium cleaning products." />
-      <div className="container mx-auto px-4 max-w-6xl">
-        <div className="text-center mb-12">
-          <h1 className="text-3xl md:text-5xl font-bold text-slate-900 mb-4">Customer Stories</h1>
-          <p className="text-slate-500 text-lg max-w-2xl mx-auto">Read honest feedback from our community or share your own experience.</p>
-        </div>
-
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Form */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 md:p-8 sticky top-24">
-              <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2"><Send className="w-5 h-5 text-primary-500" /> Share Experience</h2>
-              {message && <div className="mb-6 p-4 bg-primary-50 text-primary-700 rounded-xl text-sm font-bold flex gap-2"><ThumbsUp className="w-5 h-5" />{message}</div>}
-              <form onSubmit={handleSubmit} className="space-y-5">
-                <div><label className="block text-sm font-bold text-slate-700 mb-2">Name</label><input type="text" required className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary-500 outline-none transition-all" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="Your name" /></div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Rating</label>
-                  <div className="flex gap-2 p-4 bg-slate-50 rounded-xl justify-center">{[1,2,3,4,5].map(num => (<button key={num} type="button" onClick={() => setFormData({...formData, rating: num})} className="hover:scale-110 transition-transform"><Star size={28} fill={num <= formData.rating ? "#fbbf24" : "#e2e8f0"} className={num <= formData.rating ? "text-accent-400" : "text-slate-200"} /></button>))}</div>
-                </div>
-                <div><label className="block text-sm font-bold text-slate-700 mb-2">Review</label><textarea required className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary-500 outline-none h-32 resize-none transition-all" value={formData.comment} onChange={e => setFormData({...formData, comment: e.target.value})} placeholder="Tell us about it..." /></div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Photo (Optional)</label>
-                  <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:border-primary-400 hover:bg-primary-50 transition-all cursor-pointer relative">
-                    <input type="file" accept="image/*" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" />
-                    {previewUrl ? <img src={previewUrl} className="h-32 mx-auto rounded-lg object-cover" /> : <div className="space-y-2"><Upload className="w-8 h-8 text-slate-400 mx-auto" /><p className="text-xs text-slate-500">Tap to upload</p></div>}
-                  </div>
-                </div>
-                <button disabled={isSubmitting} className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg">{isSubmitting ? 'Posting...' : 'Post Review'}</button>
-              </form>
-            </div>
-          </div>
-
-          {/* List */}
-          <div className="lg:col-span-2 space-y-6">
-            {reviews.map(review => (
-              <div key={review.id} className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-primary-100 text-primary-700 rounded-full flex items-center justify-center font-bold text-lg">{review.customer_name.charAt(0)}</div>
-                    <div><h4 className="font-bold text-slate-900">{review.customer_name}</h4><div className="text-xs text-slate-400 flex items-center gap-1"><Calendar className="w-3 h-3" /> {new Date(review.created_at).toLocaleDateString()}</div></div>
-                  </div>
-                  <div className="flex text-accent-400">{[...Array(5)].map((_,i) => <Star key={i} size={16} fill={i < review.rating ? "currentColor" : "none"} />)}</div>
-                </div>
-                <p className="text-slate-600 leading-relaxed mb-4">"{review.comment}"</p>
-                {review.image_url && <img src={review.image_url} alt="Review" className="w-full h-48 md:h-64 object-cover rounded-xl mt-4" />}
+    <div>
+      <SEO title="Reviews" description="What customers say about Onium cleaning products." />
+      <PageIntro title="Reviews" lede="What customers say about Onium, in their own words.">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-5">
+          {reviews.length > 0 && (
+            <div className="flex items-center gap-4">
+              <span className="font-display font-extrabold text-6xl leading-none tabular">{average.toFixed(1)}</span>
+              <div>
+                <Stars rating={average} className="w-5 h-5" />
+                <p className="mt-1 text-sm text-white/90">
+                  <span className="sr-only">Rated {average.toFixed(1)} out of 5, </span>
+                  from {reviews.length} {reviews.length === 1 ? 'review' : 'reviews'}
+                </p>
               </div>
+            </div>
+          )}
+          <a
+            href="#write"
+            className="inline-flex items-center justify-center min-h-[52px] px-7 rounded-full bg-white text-primary-700 font-semibold hover:bg-primary-50 transition-colors"
+          >
+            Write a review
+          </a>
+        </div>
+      </PageIntro>
+
+      <div className="container mx-auto px-4 py-12 md:py-20">
+        {isLoading ? (
+          <ul aria-busy="true" aria-label="Loading reviews" className="grid gap-4 md:grid-cols-2 animate-pulse">
+            {[0, 1, 2, 3].map((i) => (
+              <li key={i} className="h-44 rounded-3xl bg-ink/[0.06]" />
             ))}
+          </ul>
+        ) : reviews.length === 0 ? (
+          <p className="text-[17px] text-ink/70">No reviews yet. Yours could be the first.</p>
+        ) : (
+          <ul className="grid gap-4 md:block md:columns-2 md:gap-5">
+            {reviews.map((review) => {
+              const product = review.product_id ? productsById.get(review.product_id) : undefined;
+              return (
+                <li key={review.id} className="rounded-3xl bg-white p-6 md:p-8 flex flex-col md:mb-5 md:break-inside-avoid">
+                  <div className="flex items-center gap-2">
+                    <Stars rating={review.rating} />
+                    <span className="sr-only">Rated {review.rating} out of 5</span>
+                  </div>
+                  <blockquote dir="auto" className="mt-4 font-display font-bold text-ink text-xl md:text-2xl leading-snug tracking-tight">
+                    {review.comment}
+                  </blockquote>
+                  {review.image_url && (
+                    <img
+                      src={review.image_url}
+                      alt={`Photo from ${review.customer_name}`}
+                      loading="lazy"
+                      className="mt-5 w-full max-h-72 rounded-2xl object-cover"
+                    />
+                  )}
+                  <div className="mt-auto pt-6 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                    <p className="font-semibold text-ink">{review.customer_name}</p>
+                    <time dateTime={review.created_at} className="text-sm text-ink/70">
+                      {new Date(review.created_at).toLocaleDateString('en-PK', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </time>
+                  </div>
+                  {product && (
+                    <Link
+                      to={`/product/${product.slug}`}
+                      state={{ product }}
+                      className="mt-1 self-start inline-flex items-center min-h-11 text-sm font-semibold text-primary-700 underline underline-offset-4 decoration-primary-700/30 hover:decoration-primary-700"
+                    >
+                      On {describeTitle(product).name}
+                    </Link>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+
+      <section id="write" aria-labelledby="write-heading" className="bg-white border-t border-ink/10">
+        <div className="container mx-auto px-4 py-12 md:py-20 md:grid md:grid-cols-12 md:gap-12">
+          <div className="md:col-span-5">
+            <h2 id="write-heading" className="font-display font-extrabold text-ink text-[32px] md:text-5xl leading-none">
+              Write a review
+            </h2>
+            <p className="mt-4 text-[17px] text-ink/70">
+              Tell other customers how it went. We read every review before it goes up.
+            </p>
+          </div>
+          <div className="md:col-span-7 mt-8 md:mt-0">
+            {submittedAs ? (
+              <p role="status" className="rounded-2xl bg-leaf-50 text-leaf-800 px-5 py-4 text-[16px] font-medium">
+                Thanks, {submittedAs}. Your review will show here once we've checked it.
+              </p>
+            ) : (
+              <ReviewForm products={products} onSubmitted={setSubmittedAs} />
+            )}
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

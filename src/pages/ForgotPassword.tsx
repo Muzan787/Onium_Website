@@ -1,69 +1,78 @@
-import { useState } from 'react';
+import { FormEvent, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, ArrowRight, Loader2, ArrowLeft } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import toast from 'react-hot-toast';
 import SEO from '../components/SEO';
+import PageIntro from '../components/PageIntro';
+import Field from '../components/Field';
+import { friendlyAuthError } from '../lib/authErrors';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
     setLoading(true);
-
+    setError('');
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
         redirectTo: `${window.location.origin}/update-password`,
       });
-
-      if (error) throw error;
-      toast.success('Check your email for the reset link!');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to send reset email');
+      if (resetError) throw resetError;
+      setSent(true);
+    } catch (err) {
+      setError(friendlyAuthError(err));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <SEO title="Reset Password" description="Recover your Onium account." />
-      
-      <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-8 w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Forgot Password?</h1>
-          <p className="text-slate-500">Enter your email and we'll send you a link to reset it.</p>
-        </div>
+    <div>
+      <SEO title="Reset your password" description="Reset the password for your Onium account." noIndex />
+      <PageIntro
+        title={sent ? 'Check your email' : 'Reset your password'}
+        lede={
+          sent
+            ? `If there's an account for ${email.trim()}, a link to set a new password is on its way.`
+            : "Enter your email and we'll send you a link to set a new one."
+        }
+      />
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="relative">
-            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-            <input
-              type="email"
-              placeholder="Email Address"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition-all"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-slate-900 text-white py-3.5 rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-70"
+      <div className="container mx-auto px-4 py-10 md:py-14">
+        {sent ? (
+          <Link
+            to="/login"
+            className="inline-flex items-center min-h-12 px-6 rounded-full border border-ink/15 text-ink font-semibold hover:bg-white transition-colors"
           >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Send Reset Link <ArrowRight className="w-5 h-5" /></>}
-          </button>
-        </form>
-
-        <div className="mt-8 text-center">
-           <Link to="/login" className="text-sm font-bold text-slate-500 hover:text-slate-800 flex items-center justify-center gap-2">
-             <ArrowLeft className="w-4 h-4" /> Back to Login
-           </Link>
-        </div>
+            Back to log in
+          </Link>
+        ) : (
+          <form onSubmit={handleSubmit} className="max-w-md grid gap-5">
+            <Field id="reset-email" label="Email">
+              {(props) => (
+                <input {...props} type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+              )}
+            </Field>
+            {error && (
+              <p role="alert" className="rounded-2xl bg-clay-50 px-5 py-4 text-[15px] font-medium text-clay-800">
+                {error}
+              </p>
+            )}
+            <button
+              type="submit"
+              disabled={loading}
+              className="min-h-[52px] rounded-full bg-primary-600 text-white font-semibold hover:bg-primary-700 disabled:opacity-70 transition-colors"
+            >
+              {loading ? 'Sending…' : 'Send reset link'}
+            </button>
+            <Link to="/login" className="justify-self-start inline-flex items-center min-h-11 text-sm font-semibold text-primary-700 hover:underline underline-offset-4">
+              Back to log in
+            </Link>
+          </form>
+        )}
       </div>
     </div>
   );

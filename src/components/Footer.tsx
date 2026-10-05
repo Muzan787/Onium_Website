@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
 import { MapPin, Mail, MessageCircle } from 'lucide-react';
 import { ACCENTS } from '../lib/productAccents';
+import { ADDRESS, EMAIL, PHONE_DISPLAY, PHONE_HREF, WHATSAPP_URL } from '../lib/contact';
 
 const LOGO = 'https://res.cloudinary.com/dztldh7o2/image/upload/v1769171993/Logo_ft1lsj.png';
-const WHATSAPP = 'https://wa.me/923231550147';
 
 const SHOP = [
   { label: 'All products', to: '/', hash: '#products' },
@@ -46,7 +46,7 @@ export default function Footer() {
             {/* Ink on the bright WhatsApp green is 8.6:1; white on it is 3.1:1,
                 which fails for text this size. */}
             <a
-              href={WHATSAPP}
+              href={WHATSAPP_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="mt-6 flex md:inline-flex w-full md:w-auto items-center justify-center gap-2 min-h-[52px] px-7 rounded-full bg-[#25D366] text-ink font-semibold hover:brightness-95 active:scale-95 transition-[filter,transform]"
@@ -56,10 +56,10 @@ export default function Footer() {
             </a>
             <div>
               <a
-                href="tel:+923231550147"
+                href={PHONE_HREF}
                 className="mt-2 inline-flex min-h-11 items-center text-sm text-white/70 hover:text-white tabular transition-colors"
               >
-                +92 323 1550147
+                {PHONE_DISPLAY}
               </a>
             </div>
           </div>
@@ -104,12 +104,12 @@ export default function Footer() {
             <ul className="mt-8 space-y-3 text-sm">
               <li className="flex items-start gap-3">
                 <MapPin className="w-4 h-4 text-leaf-500 shrink-0 mt-0.5" aria-hidden />
-                <span>HM Towers, Office 402, 5th Floor, Gulberg Green, Islamabad</span>
+                <span>{ADDRESS}</span>
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="w-4 h-4 text-leaf-500 shrink-0" aria-hidden />
-                <a href="mailto:rabta@onium.store" className="hover:text-white transition-colors break-all">
-                  rabta@onium.store
+                <a href={`mailto:${EMAIL}`} className="hover:text-white transition-colors break-all">
+                  {EMAIL}
                 </a>
               </li>
             </ul>

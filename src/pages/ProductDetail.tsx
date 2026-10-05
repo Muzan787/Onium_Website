@@ -1,8 +1,8 @@
-import { ChangeEvent, FormEvent, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer-motion';
-import { ArrowLeft, Check, ImagePlus, Maximize2, MessageCircle, Share2, Star, X } from 'lucide-react';
+import { ArrowLeft, Check, Maximize2, MessageCircle, Share2, X } from 'lucide-react';
 import { supabase, Product, Review } from '../lib/supabase';
 import { useCart } from '../context/CartContext';
 import { accentFor } from '../lib/productAccents';
@@ -14,8 +14,10 @@ import Reassurance from '../components/Reassurance';
 import ProductTile from '../components/ProductTile';
 import QuantityStepper from '../components/QuantityStepper';
 import { useFooterInView } from '../hooks/useFooterInView';
+import Stars from '../components/Stars';
+import ReviewForm from '../components/ReviewForm';
+import { whatsappWith } from '../lib/contact';
 
-const WHATSAPP = 'https://wa.me/923231550147';
 const EASE = [0.16, 1, 0.3, 1] as const;
 const MAX_QUANTITY = 99;
 const ALL_PRODUCTS = { pathname: '/', hash: '#products' };
@@ -25,8 +27,7 @@ const rise: Variants = {
   shown: { opacity: 1, y: 0, transition: { duration: 0.6, ease: EASE } },
 };
 
-const whatsappAbout = (title: string) =>
-  `${WHATSAPP}?text=${encodeURIComponent(`Hi Onium, I have a question about ${title}.`)}`;
+const whatsappAbout = (title: string) => whatsappWith(`Hi Onium, I have a question about ${title}.`);
 
 /** Remount per product, so nothing (quantity, reviews, an open form) carries
  *  over when you move from one product straight to another. */
@@ -532,21 +533,6 @@ function AddButton({ added, total, onAdd }: { added: boolean; total: number; onA
   );
 }
 
-function Stars({ rating, className = 'w-4 h-4' }: { rating: number; className?: string }) {
-  return (
-    <span className="flex gap-0.5" aria-hidden>
-      {[1, 2, 3, 4, 5].map((n) => (
-        <Star
-          key={n}
-          className={`${className} ${n <= Math.round(rating) ? 'text-accent-500' : 'text-ink/15'}`}
-          fill="currentColor"
-          strokeWidth={0}
-        />
-      ))}
-    </span>
-  );
-}
-
 function ReviewsSection({
   productId,
   reviews,
@@ -618,6 +604,7 @@ function ReviewsSection({
                 className="overflow-hidden"
               >
                 <ReviewForm
+                  className="pt-8 md:pt-0 pb-2"
                   productId={productId}
                   onSubmitted={(name) => {
                     setSubmittedAs(name);
@@ -646,7 +633,7 @@ function ReviewsSection({
                     <Stars rating={review.rating} />
                     <span className="sr-only">Rated {review.rating} out of 5</span>
                   </div>
-                  {review.comment && <p className="mt-3 text-[16px] leading-relaxed text-ink/80">{review.comment}</p>}
+                  {review.comment && <p dir="auto" className="mt-3 text-[16px] leading-relaxed text-ink/80">{review.comment}</p>}
                   {review.image_url && (
                     <img
                       src={review.image_url}
@@ -662,158 +649,6 @@ function ReviewsSection({
         </div>
       </div>
     </section>
-  );
-}
-
-function ReviewForm({ productId, onSubmitted }: { productId: string; onSubmitted: (name: string) => void }) {
-  const [name, setName] = useState('');
-  const [rating, setRating] = useState(5);
-  const [comment, setComment] = useState('');
-  const [photo, setPhoto] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const fieldId = useId();
-
-  useEffect(() => () => {
-    if (preview) URL.revokeObjectURL(preview);
-  }, [preview]);
-
-  const handlePhoto = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0] ?? null;
-    setPhoto(file);
-    setPreview(file ? URL.createObjectURL(file) : null);
-  };
-
-  const handleSubmit = async (event: FormEvent) => {
-    event.preventDefault();
-    setIsSubmitting(true);
-
-    let imageUrl: string | null = null;
-    if (photo) {
-      const body = new FormData();
-      body.append('file', photo);
-      body.append('upload_preset', 'OniumReviews');
-      try {
-        const response = await fetch('https://api.cloudinary.com/v1_1/dztldh7o2/image/upload', { method: 'POST', body });
-        imageUrl = (await response.json()).secure_url ?? null;
-      } catch (error) {
-        // The review is still worth posting without its photo.
-        console.error('Review photo upload failed:', error);
-      }
-    }
-
-    const { error } = await supabase.from('reviews').insert([
-      { customer_name: name.trim(), rating, comment: comment.trim(), image_url: imageUrl, product_id: productId },
-    ]);
-    setIsSubmitting(false);
-
-    if (error) {
-      toast.error("Couldn't post your review. Check your connection and try again.");
-      return;
-    }
-    onSubmitted(name.trim().split(/\s+/)[0]);
-  };
-
-  const inputClass =
-    'mt-2 w-full min-h-12 px-4 rounded-2xl border border-ink/15 bg-white text-ink text-base placeholder:text-ink/50 focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-600/20';
-
-  return (
-    <form onSubmit={handleSubmit} className="pt-8 md:pt-0 pb-2 grid gap-5">
-      <div>
-        <label htmlFor={`${fieldId}-name`} className="text-sm font-semibold text-ink">
-          Your name
-        </label>
-        <input
-          id={`${fieldId}-name`}
-          type="text"
-          required
-          autoComplete="name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className={inputClass}
-        />
-      </div>
-
-      <fieldset>
-        <legend className="text-sm font-semibold text-ink">Your rating</legend>
-        <div className="mt-1 flex items-center">
-          {[1, 2, 3, 4, 5].map((n) => (
-            <label key={n} className="relative w-11 h-11 grid place-items-center cursor-pointer">
-              <input
-                type="radio"
-                name={`${fieldId}-rating`}
-                value={n}
-                checked={rating === n}
-                onChange={() => setRating(n)}
-                className="peer sr-only"
-              />
-              <span className="sr-only">
-                {n} {n === 1 ? 'star' : 'stars'}
-              </span>
-              <Star
-                aria-hidden
-                className={`w-7 h-7 rounded-sm peer-focus-visible:ring-2 peer-focus-visible:ring-primary-600 ${
-                  n <= rating ? 'text-accent-500' : 'text-ink/15'
-                }`}
-                fill="currentColor"
-                strokeWidth={0}
-              />
-            </label>
-          ))}
-          <span className="ml-2 text-sm text-ink/70 tabular">{rating} out of 5</span>
-        </div>
-      </fieldset>
-
-      <div>
-        <label htmlFor={`${fieldId}-comment`} className="text-sm font-semibold text-ink">
-          Your review
-        </label>
-        <textarea
-          id={`${fieldId}-comment`}
-          required
-          rows={4}
-          value={comment}
-          onChange={(e) => setComment(e.target.value)}
-          placeholder="How did it work for you?"
-          className={`${inputClass} py-3 resize-none`}
-        />
-      </div>
-
-      <div className="flex items-center gap-4">
-        <label className="inline-flex items-center gap-2 min-h-11 px-4 rounded-full border border-dashed border-ink/25 text-sm font-semibold text-ink cursor-pointer hover:bg-surface transition-colors focus-within:ring-2 focus-within:ring-primary-600">
-          <input type="file" accept="image/*" onChange={handlePhoto} className="sr-only" />
-          <ImagePlus className="w-[18px] h-[18px]" aria-hidden />
-          {photo ? 'Change photo' : 'Add a photo'}
-          <span className="font-normal text-ink/70">(optional)</span>
-        </label>
-        {preview && (
-          <div className="relative">
-            <img src={preview} alt="Your photo" className="w-14 h-14 rounded-xl object-cover" />
-            <button
-              type="button"
-              onClick={() => {
-                setPhoto(null);
-                setPreview(null);
-              }}
-              aria-label="Remove photo"
-              className="absolute -top-3 -right-3 w-11 h-11 grid place-items-center"
-            >
-              <span className="w-6 h-6 rounded-full bg-ink text-white grid place-items-center">
-                <X className="w-3.5 h-3.5" aria-hidden />
-              </span>
-            </button>
-          </div>
-        )}
-      </div>
-
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="justify-self-start min-h-12 px-8 rounded-full bg-primary-600 text-white font-semibold hover:bg-primary-700 disabled:opacity-60 transition-colors"
-      >
-        {isSubmitting ? 'Posting…' : 'Post review'}
-      </button>
-    </form>
   );
 }
 

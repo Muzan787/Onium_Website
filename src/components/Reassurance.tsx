@@ -3,7 +3,7 @@ import { FREE_DELIVERY_FROM } from '../lib/pricing';
 
 const POINTS = [
   { title: 'Pay on delivery', sub: 'Cash or transfer' },
-  { title: 'Free delivery', sub: `Over ${formatRs(FREE_DELIVERY_FROM)}` },
+  { title: 'Free delivery', sub: `From ${formatRs(FREE_DELIVERY_FROM)}` },
   {
     title: '1–3 days',
     sub: 'Isb & Rwp',

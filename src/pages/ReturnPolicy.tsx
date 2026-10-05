@@ -1,114 +1,94 @@
-import { RefreshCw, CheckCircle, AlertCircle, DollarSign, MessageCircle } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
 import SEO from '../components/SEO';
+import PageIntro from '../components/PageIntro';
+import { AtAGlance, PolicySection } from '../components/Policy';
+import { PHONE_DISPLAY, whatsappWith } from '../lib/contact';
+
+const RETURN_MESSAGE = "Hi Onium, I'd like to return an item. My order number is #";
 
 export default function ReturnPolicy() {
   return (
-    <div className="min-h-screen bg-slate-50 py-12">
-      <SEO title="Return & Refund Policy" description="Our 7-day No Questions Asked return policy and refund process." />
-      
-      <div className="container mx-auto px-4 max-w-3xl">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <div className="inline-flex p-4 bg-green-100 text-green-600 rounded-full mb-4">
-            <RefreshCw className="w-8 h-8" />
-          </div>
-          <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Return & Refund Policy</h1>
-          <p className="text-slate-500 text-lg">
-            We want you to love our products. If you don't, we're here to help.
-          </p>
-        </div>
+    <div>
+      <SEO title="Returns and refunds" description="Onium's 7-day no questions asked returns policy and how refunds work." />
+      <PageIntro
+        title="Returns and refunds"
+        lede="We want you to love our products. If you don't, we're here to help."
+      />
 
-        <div className="space-y-6">
-          
-          {/* Main Guarantee Card */}
-          <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 md:p-8 text-center">
-            <h2 className="text-2xl font-bold text-slate-900 mb-4">7-Day "No Questions Asked" Guarantee</h2>
-            <p className="text-slate-600 mb-6 leading-relaxed">
-              We stand by the quality of our cleaning solutions. If you receive a damaged product, the wrong item, or are simply not satisfied with the cleaning results, you can return it within <strong>7 days of delivery</strong>.
+      <div className="container mx-auto px-4 py-10 md:py-16">
+        <AtAGlance
+          items={[
+            { label: 'Start a return within', value: '7 days', note: 'of delivery' },
+            { label: 'Refunds processed in', value: '24 to 48 hours', note: 'once we have your return or photo' },
+            { label: 'Refunded to', value: 'Bank or wallet', note: 'EasyPaisa or JazzCash' },
+          ]}
+        />
+
+        <div className="mt-4">
+          <PolicySection title="Our 7-day guarantee">
+            <p>
+              We stand by our cleaning products. If you receive a damaged product or the wrong item, or you're simply
+              not happy with the results, you can return it within <strong>7 days of delivery</strong>, no questions
+              asked.
             </p>
-            <div className="flex flex-wrap justify-center gap-4 text-sm font-bold text-slate-700">
-              <div className="flex items-center gap-2 bg-slate-50 px-4 py-2 rounded-lg">
-                <CheckCircle className="w-4 h-4 text-green-500" /> Easy Returns
-              </div>
-              <div className="flex items-center gap-2 bg-slate-50 px-4 py-2 rounded-lg">
-                <CheckCircle className="w-4 h-4 text-green-500" /> Full Refund
-              </div>
-              <div className="flex items-center gap-2 bg-slate-50 px-4 py-2 rounded-lg">
-                <CheckCircle className="w-4 h-4 text-green-500" /> Fast Processing
-              </div>
-            </div>
-          </div>
+          </PolicySection>
 
-          {/* Policy Details */}
-          <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="p-6 md:p-8 space-y-8">
-              
-              {/* Eligibility */}
-              <section>
-                <div className="flex items-center gap-3 mb-3">
-                  <AlertCircle className="w-5 h-5 text-primary-500" />
-                  <h3 className="text-xl font-bold text-slate-900">Eligibility for Returns</h3>
-                </div>
-                <ul className="list-disc pl-5 space-y-2 text-slate-600 text-sm md:text-base">
-                  <li>Item must be initiated for return within 7 days of delivery.</li>
-                  <li><strong>For Damaged/Leaking Items:</strong> Please provide a photo as proof.</li>
-                  <li><strong>For "Change of Mind":</strong> The product must be unused, sealed, and in its original packaging.</li>
-                  <li><strong>For Performance Issues:</strong> If you used the product and it didn't work as expected, contact us for a consultation or refund.</li>
-                </ul>
-              </section>
+          <PolicySection title="What can be returned">
+            <ul>
+              <li>Returns must be started within 7 days of delivery.</li>
+              <li>
+                <strong>Damaged or leaking items:</strong> send us a photo as proof.
+              </li>
+              <li>
+                <strong>Change of mind:</strong> the product must be unused, sealed and in its original packaging.
+              </li>
+              <li>
+                <strong>Didn't work as expected:</strong> if you used it and it didn't do the job, contact us for advice
+                or a refund.
+              </li>
+            </ul>
+          </PolicySection>
 
-              <hr className="border-slate-100" />
+          <PolicySection title="How to start a return">
+            <p>No forms to fill in.</p>
+            <ol>
+              <li>Message us on WhatsApp at {PHONE_DISPLAY}.</li>
+              <li>Share your order number (for example #12AB34CD) and why you're returning it.</li>
+              <li>If the item is damaged, attach a photo.</li>
+              <li>We'll approve the return and tell you what happens next.</li>
+            </ol>
+            <a
+              href={whatsappWith(RETURN_MESSAGE)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="!mt-6 inline-flex items-center gap-2 min-h-12 px-6 rounded-full bg-[#25D366] text-ink font-semibold hover:brightness-95 transition-[filter]"
+            >
+              <MessageCircle className="w-[18px] h-[18px]" aria-hidden />
+              Start a return on WhatsApp
+            </a>
+          </PolicySection>
 
-              {/* How to Return */}
-              <section>
-                <div className="flex items-center gap-3 mb-3">
-                  <MessageCircle className="w-5 h-5 text-secondary-500" />
-                  <h3 className="text-xl font-bold text-slate-900">How to Initiate a Return</h3>
-                </div>
-                <p className="text-slate-600 mb-4 text-sm md:text-base">
-                  We make it simple. No complex forms to fill out.
-                </p>
-                <div className="bg-slate-50 rounded-xl p-5 border border-slate-200">
-                  <ol className="list-decimal pl-5 space-y-3 text-slate-700 font-medium">
-                    <li>Message us on WhatsApp at <strong>+92 323 1550147</strong>.</li>
-                    <li>Share your Order ID (e.g., #12AB34CD) and reason for return.</li>
-                    <li>If the item is damaged, please attach a photo.</li>
-                    <li>Our team will approve the return and guide you on the next steps.</li>
-                  </ol>
-                </div>
-              </section>
+          <PolicySection title="Refunds">
+            <p>
+              Once we receive your return, or the photo for a damaged item, we process your refund within{' '}
+              <strong>24 to 48 hours</strong>, to either:
+            </p>
+            <ul>
+              <li>
+                <strong>Bank transfer:</strong> to your Meezan, HBL or other bank account.
+              </li>
+              <li>
+                <strong>Mobile wallet:</strong> EasyPaisa or JazzCash.
+              </li>
+            </ul>
+          </PolicySection>
 
-              <hr className="border-slate-100" />
-
-              {/* Refund Process */}
-              <section>
-                <div className="flex items-center gap-3 mb-3">
-                  <DollarSign className="w-5 h-5 text-green-600" />
-                  <h3 className="text-xl font-bold text-slate-900">Refund Methods</h3>
-                </div>
-                <p className="text-slate-600 text-sm md:text-base mb-3">
-                  Once we receive your return (or photo proof for damaged items), we process refunds within <strong>24-48 hours</strong>.
-                </p>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                    <h4 className="font-bold text-slate-900 mb-1">Bank Transfer</h4>
-                    <p className="text-slate-500 text-sm">Directly to your Meezan, HBL, or standard bank account.</p>
-                  </div>
-                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                    <h4 className="font-bold text-slate-900 mb-1">Mobile Wallets</h4>
-                    <p className="text-slate-500 text-sm">EasyPaisa or JazzCash for instant transfer.</p>
-                  </div>
-                </div>
-              </section>
-
-            </div>
-          </div>
-          
-          {/* Note on Return Shipping */}
-          <div className="text-center text-slate-400 text-sm px-4">
-            <p>* For "Change of Mind" returns, the customer is responsible for return shipping costs. <br/>For damaged/incorrect items, we cover all costs.</p>
-          </div>
-
+          <PolicySection title="Return delivery costs">
+            <p>
+              For change-of-mind returns, you pay the return delivery. For damaged or incorrect items, we cover every
+              cost.
+            </p>
+          </PolicySection>
         </div>
       </div>
     </div>

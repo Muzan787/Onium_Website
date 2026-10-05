@@ -1,44 +1,135 @@
-import { ShieldCheck, Truck, Clock, Award } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { MapPin } from 'lucide-react';
+import { supabase, Product } from '../lib/supabase';
+import { accentFor } from '../lib/productAccents';
+import { formatRs } from '../lib/format';
+import { describeTitle } from '../lib/productInfo';
+import { DELIVERY_FEE, FREE_DELIVERY_FROM } from '../lib/pricing';
+import { ADDRESS, MAP_URL, SUPPORT_HOURS } from '../lib/contact';
 import SEO from '../components/SEO';
+import PageIntro from '../components/PageIntro';
+
+/** Promises the rest of the site already makes, gathered in one place. */
+const PROMISES = [
+  {
+    title: 'Pay when it arrives',
+    body: 'Pay on delivery, by bank transfer or cash. Nothing up front.',
+  },
+  {
+    title: 'Delivered in Islamabad and Rawalpindi',
+    body: `Free from ${formatRs(FREE_DELIVERY_FROM)}, otherwise ${formatRs(DELIVERY_FEE)}.`,
+    link: { to: '/shipping-policy', label: 'Shipping policy' },
+  },
+  {
+    title: 'Real people on WhatsApp',
+    body: `Questions about an order or which cleaner to use, ${SUPPORT_HOURS}.`,
+    link: { to: '/contact', label: 'Contact us' },
+  },
+  {
+    title: 'Returns within 7 days',
+    body: 'Damaged, wrong, or not doing the job? Tell us within 7 days of delivery.',
+    link: { to: '/return-policy', label: 'Returns policy' },
+  },
+];
 
 export default function About() {
-  const features = [
-    { icon: <ShieldCheck className="w-8 h-8 text-primary-500" />, title: "Secure Shopping", desc: "Industry-standard encryption to protect your data." },
-    { icon: <Truck className="w-8 h-8 text-secondary-500" />, title: "Fast Delivery", desc: "Reliable shipping to get your products to you quickly." },
-    { icon: <Clock className="w-8 h-8 text-accent-500" />, title: "24/7 Support", desc: "Our team is always here to help via WhatsApp." },
-    { icon: <Award className="w-8 h-8 text-primary-500" />, title: "Quality Guaranteed", desc: "Premium formulas that actually work." }
-  ];
+  const [range, setRange] = useState<Product[]>([]);
+
+  useEffect(() => {
+    supabase
+      .from('products')
+      .select('*')
+      .order('created_at')
+      .then(({ data }) => setRange(data ?? []));
+  }, []);
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <SEO title="About Us" description="Learn more about Onium's mission to provide eco-friendly cleaning solutions." />
-      <div className="bg-slate-900 text-white py-20 text-center">
-        <h1 className="text-4xl md:text-5xl font-bold mb-4">About Onium</h1>
-        <p className="text-lg text-slate-400 max-w-xl mx-auto">Redefining home hygiene with eco-friendly, powerful cleaning solutions.</p>
-      </div>
+    <div>
+      <SEO title="About us" description="Onium makes everyday cleaning products in Pakistan, without the harsh chemicals." />
 
-      <div className="container mx-auto px-4 py-16">
-        <div className="grid md:grid-cols-2 gap-12 items-center mb-20">
-          <div>
-            <h2 className="text-3xl font-bold text-slate-900 mb-6">Our Mission</h2>
-            <p className="text-slate-600 leading-relaxed mb-4">Onium was founded to bridge the gap between powerful industrial cleaning and safe, home-friendly products. We believe you shouldn't have to choose between a clean home and a safe environment.</p>
-            <p className="text-slate-600 leading-relaxed">Our formulas are biodegradable, non-toxic, and highly effective against stubborn stains.</p>
-          </div>
-          <div className="rounded-3xl overflow-hidden shadow-2xl border-4 border-white">
-            <img src="https://images.pexels.com/photos/48604/pexels-photo-48604.jpeg?auto=compress&cs=tinysrgb&w=800" alt="Clean Home" className="w-full h-full object-cover" />
-          </div>
-        </div>
+      <PageIntro
+        title="About Onium"
+        lede="Everyday cleaning products made in Pakistan, without the harsh chemicals."
+      >
+        {/* The range itself is the best picture of what Onium is. */}
+        {range.length > 0 && (
+          <ul className="grid grid-cols-4 md:grid-cols-8 gap-2 md:gap-3">
+            {range.slice(0, 8).map((product) => (
+              <li key={product.id}>
+                <Link
+                  to={`/product/${product.slug}`}
+                  state={{ product }}
+                  className="block aspect-square rounded-2xl overflow-hidden ring-1 ring-white/15 hover:ring-white/60 transition-shadow"
+                  style={{ backgroundColor: accentFor(product).tint }}
+                >
+                  <img
+                    src={product.image_url}
+                    alt={describeTitle(product).name}
+                    width={160}
+                    height={160}
+                    loading="lazy"
+                    className="w-full h-full object-cover"
+                  />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </PageIntro>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {features.map((f, i) => (
-            <div key={i} className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all text-center">
-              <div className="bg-slate-50 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">{f.icon}</div>
-              <h3 className="text-lg font-bold text-slate-900 mb-2">{f.title}</h3>
-              <p className="text-sm text-slate-500">{f.desc}</p>
-            </div>
-          ))}
+      <section className="container mx-auto px-4 py-14 md:py-24 md:grid md:grid-cols-12 md:gap-12">
+        <h2 className="md:col-span-5 font-display font-extrabold text-ink text-[32px] md:text-5xl leading-none">
+          Why we started
+        </h2>
+        <div className="md:col-span-7 mt-5 md:mt-0 max-w-prose text-[17px] md:text-lg leading-relaxed text-ink/80 space-y-5">
+          <p>
+            Onium was founded to close the gap between powerful industrial cleaning and products that are safe to
+            use at home. You shouldn't have to choose between a clean home and a safe one.
+          </p>
+          <p>Our formulas are biodegradable, non-toxic, and made to shift stubborn stains.</p>
         </div>
-      </div>
+      </section>
+
+      <section aria-labelledby="promises-heading" className="bg-white border-y border-ink/10">
+        <div className="container mx-auto px-4 py-14 md:py-24">
+          <h2 id="promises-heading" className="font-display font-extrabold text-ink text-[32px] md:text-5xl leading-none">
+            What you can count on
+          </h2>
+          <ul className="mt-8 md:mt-12 border-t border-ink/10 md:grid md:grid-cols-2 md:gap-x-12">
+            {PROMISES.map(({ title, body, link }) => (
+              <li key={title} className="border-b border-ink/10 py-6 md:py-8">
+                <h3 className="font-display font-bold text-ink text-xl md:text-2xl">{title}</h3>
+                <p className="mt-2 text-[16px] text-ink/75 leading-relaxed">{body}</p>
+                {link && (
+                  <Link
+                    to={link.to}
+                    className="mt-2 inline-flex items-center min-h-11 text-sm font-semibold text-primary-700 underline underline-offset-4 decoration-primary-700/30 hover:decoration-primary-700"
+                  >
+                    {link.label}
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <section className="container mx-auto px-4 py-14 md:py-20">
+        <h2 className="font-display font-extrabold text-ink text-[28px] md:text-4xl">Find us</h2>
+        <p className="mt-3 flex items-start gap-3 text-[17px] text-ink/80">
+          <MapPin className="w-5 h-5 mt-1 shrink-0 text-primary-600" aria-hidden />
+          {ADDRESS}
+        </p>
+        <a
+          href={MAP_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-5 inline-flex items-center min-h-12 px-6 rounded-full border border-ink/15 text-ink font-semibold hover:bg-white transition-colors"
+        >
+          Open in Google Maps
+        </a>
+      </section>
     </div>
   );
 }

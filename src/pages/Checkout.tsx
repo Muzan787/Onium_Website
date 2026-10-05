@@ -3,7 +3,7 @@ import { Link, Navigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import type { User } from '@supabase/supabase-js';
-import { AlertCircle, ArrowLeft, Check, ChevronDown, Copy, Lock } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Check, ChevronDown, Copy } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { supabase } from '../lib/supabase';
 import { formatRs } from '../lib/format';
@@ -12,11 +12,14 @@ import { deliveryFeeFor } from '../lib/pricing';
 import { useFooterInView } from '../hooks/useFooterInView';
 import { useInViewport } from '../hooks/useInViewport';
 import SEO from '../components/SEO';
+import Field, { INPUT_CLASS } from '../components/Field';
 import { OrderLines, OrderTotals } from '../components/OrderSummary';
 
 // Delivery is limited to these two cities for now.
 const SERVICEABLE_CITIES = ['Islamabad', 'Rawalpindi'];
 const EASE = [0.16, 1, 0.3, 1] as const;
+// Login sends people back where they came from.
+const LOGIN_RETURN = { from: { pathname: '/checkout' } };
 
 // The one live code: 10% off a customer's first order, for signed-in customers.
 const WELCOME_CODE = 'WELCOME10';
@@ -203,7 +206,7 @@ export default function Checkout() {
               title="Your details"
               aside={
                 !user && (
-                  <Link to="/login" className="inline-flex items-center min-h-11 text-sm font-semibold text-primary-700 hover:underline underline-offset-4">
+                  <Link to="/login" state={LOGIN_RETURN} className="inline-flex items-center min-h-11 text-sm font-semibold text-primary-700 hover:underline underline-offset-4">
                     Log in
                   </Link>
                 )
@@ -264,7 +267,7 @@ export default function Checkout() {
                   </select>
                 )}
               </Field>
-              <Field id="checkout-address" label="Address" error={fieldError('address')}>
+              <Field id="checkout-address" label="Address" error={fieldError('address')} multiline>
                 {(props) => (
                   <textarea
                     {...props}
@@ -276,7 +279,7 @@ export default function Checkout() {
                   />
                 )}
               </Field>
-              <Field id="checkout-notes" label="Delivery notes" optional>
+              <Field id="checkout-notes" label="Delivery notes" optional multiline>
                 {(props) => (
                   <textarea
                     {...props}
@@ -357,7 +360,7 @@ export default function Checkout() {
                                     applyCoupon();
                                   }
                                 }}
-                                className={`${INPUT} flex-1 min-w-0 uppercase`}
+                                className={`${INPUT_CLASS} flex-1 min-w-0 uppercase`}
                               />
                               <button
                                 type="button"
@@ -378,7 +381,7 @@ export default function Checkout() {
                         ) : (
                           <p className="text-[15px] text-ink/70">
                             Discount codes work with an account.{' '}
-                            <Link to="/login" className="font-semibold text-primary-700 underline underline-offset-2 whitespace-nowrap">
+                            <Link to="/login" state={LOGIN_RETURN} className="font-semibold text-primary-700 underline underline-offset-2 whitespace-nowrap">
                               Log in
                             </Link>{' '}
                             to use one.
@@ -462,9 +465,6 @@ export default function Checkout() {
 
 /* -------------------------------------------------------------- PIECES */
 
-const INPUT =
-  'w-full min-h-[52px] px-4 rounded-2xl border border-ink/15 bg-white text-base text-ink placeholder:text-ink/45 focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-600/20 aria-[invalid=true]:border-clay-700 [&[readonly]]:bg-ink/5 [&[readonly]]:text-ink/70';
-
 function FormSection({ step, title, aside, children }: { step: number; title: string; aside?: ReactNode; children: ReactNode }) {
   const headingId = useId();
   return (
@@ -480,61 +480,6 @@ function FormSection({ step, title, aside, children }: { step: number; title: st
       </div>
       <div className="mt-5 grid gap-5">{children}</div>
     </section>
-  );
-}
-
-interface FieldControlProps {
-  id: string;
-  className: string;
-  'aria-invalid'?: boolean;
-  'aria-describedby'?: string;
-}
-
-function Field({
-  id,
-  label,
-  hint,
-  error,
-  optional,
-  locked,
-  children,
-}: {
-  id: string;
-  label: string;
-  hint?: string;
-  error?: string;
-  optional?: boolean;
-  locked?: boolean;
-  children: (props: FieldControlProps) => ReactNode;
-}) {
-  const describedBy = [hint && `${id}-hint`, error && `${id}-error`].filter(Boolean).join(' ') || undefined;
-  return (
-    <div>
-      <label htmlFor={id} className="flex items-center gap-2 text-sm font-semibold text-ink">
-        {label}
-        {optional && <span className="font-normal text-ink/70">(optional)</span>}
-        {locked && <Lock className="w-3.5 h-3.5 text-ink/60" aria-hidden />}
-      </label>
-      <div className="mt-2">
-        {children({
-          id,
-          className: `${INPUT} ${id.includes('address') || id.includes('notes') ? 'py-3 resize-none' : ''}`,
-          'aria-invalid': error ? true : undefined,
-          'aria-describedby': describedBy,
-        })}
-      </div>
-      {hint && (
-        <p id={`${id}-hint`} className="mt-2 text-sm text-ink/70">
-          {hint}
-        </p>
-      )}
-      {error && (
-        <p id={`${id}-error`} className="mt-2 flex items-center gap-1.5 text-sm font-medium text-clay-800">
-          <AlertCircle className="w-4 h-4 shrink-0" aria-hidden />
-          {error}
-        </p>
-      )}
-    </div>
   );
 }
 
