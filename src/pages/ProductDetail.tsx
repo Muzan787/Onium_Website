@@ -2,7 +2,7 @@ import { ChangeEvent, FormEvent, useEffect, useId, useLayoutEffect, useRef, useS
 import { Link, useLocation, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer-motion';
-import { ArrowLeft, Check, ImagePlus, Maximize2, MessageCircle, Minus, Plus, Share2, Star, X } from 'lucide-react';
+import { ArrowLeft, Check, ImagePlus, Maximize2, MessageCircle, Share2, Star, X } from 'lucide-react';
 import { supabase, Product, Review } from '../lib/supabase';
 import { useCart } from '../context/CartContext';
 import { accentFor } from '../lib/productAccents';
@@ -12,6 +12,8 @@ import { markArrived } from '../lib/morph';
 import SEO from '../components/SEO';
 import Reassurance from '../components/Reassurance';
 import ProductTile from '../components/ProductTile';
+import QuantityStepper from '../components/QuantityStepper';
+import { useFooterInView } from '../hooks/useFooterInView';
 
 const WHATSAPP = 'https://wa.me/923231550147';
 const EASE = [0.16, 1, 0.3, 1] as const;
@@ -56,7 +58,6 @@ function ProductDetail({ slug }: { slug: string }) {
 
   const [activeImage, setActiveImage] = useState(0);
   const [zoomOpen, setZoomOpen] = useState(false);
-  const [footerInView, setFooterInView] = useState(false);
 
   const photoRef = useRef<HTMLButtonElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -119,17 +120,8 @@ function ProductDetail({ slug }: { slug: string }) {
     };
   }, [slug, initial, attempt]);
 
-  // The buy bar steps aside for the footer, so the page can actually end. It
-  // leaves a little early, before the last row of tiles can slide under it.
-  useEffect(() => {
-    const footer = document.querySelector('footer');
-    if (!footer) return;
-    const observer = new IntersectionObserver(([entry]) => setFooterInView(entry.isIntersecting), {
-      rootMargin: '0px 0px 120px 0px',
-    });
-    observer.observe(footer);
-    return () => observer.disconnect();
-  }, []);
+  // The buy bar steps aside for the footer, so the page can actually end.
+  const footerInView = useFooterInView();
 
   useEffect(() => () => window.clearTimeout(addedTimer.current), []);
 
@@ -230,7 +222,7 @@ function ProductDetail({ slug }: { slug: string }) {
     </div>
   ) : (
     <>
-      <QuantityStepper value={quantity} max={maxQuantity} onChange={setQuantity} />
+      <QuantityStepper value={quantity} max={maxQuantity} onChange={setQuantity} label={`Quantity of ${name}`} />
       <AddButton added={added} total={price * quantity} onAdd={handleAdd} />
     </>
   );
@@ -506,35 +498,6 @@ function ProductDetail({ slug }: { slug: string }) {
 }
 
 /* -------------------------------------------------------------- PIECES */
-
-function QuantityStepper({ value, max, onChange }: { value: number; max: number; onChange: (n: number) => void }) {
-  return (
-    <div role="group" aria-label="Quantity" className="shrink-0 flex items-center rounded-full border border-ink/15 bg-white">
-      <button
-        type="button"
-        onClick={() => onChange(Math.max(1, value - 1))}
-        disabled={value <= 1}
-        aria-label="Decrease quantity"
-        className="w-11 h-[50px] grid place-items-center rounded-l-full text-ink disabled:text-ink/30 hover:bg-surface transition-colors"
-      >
-        <Minus className="w-4 h-4" aria-hidden />
-      </button>
-      <span className="w-7 text-center font-semibold text-ink tabular" aria-live="polite">
-        <span className="sr-only">Quantity </span>
-        {value}
-      </span>
-      <button
-        type="button"
-        onClick={() => onChange(Math.min(max, value + 1))}
-        disabled={value >= max}
-        aria-label="Increase quantity"
-        className="w-11 h-[50px] grid place-items-center rounded-r-full text-ink disabled:text-ink/30 hover:bg-surface transition-colors"
-      >
-        <Plus className="w-4 h-4" aria-hidden />
-      </button>
-    </div>
-  );
-}
 
 function AddButton({ added, total, onAdd }: { added: boolean; total: number; onAdd: () => void }) {
   const reduceMotion = useReducedMotion();

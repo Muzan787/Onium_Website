@@ -1,31 +1,51 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Search, Package, CheckCircle, Clock, Truck, XCircle, MessageCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import SEO from '../components/SEO';
 
+/** What get_order_by_tracking returns: just enough to show progress. */
+interface TrackedOrder {
+  id: string;
+  status: string;
+  created_at: string;
+  total_price: number;
+}
+
 export default function TrackOrder() {
-  const [orderId, setOrderId] = useState('');
-  const [orderStatus, setOrderStatus] = useState<any>(null);
+  // The order confirmation links here as /track-order?order=CODE.
+  const [searchParams] = useSearchParams();
+  const linkedCode = searchParams.get('order') ?? '';
+  const [orderId, setOrderId] = useState(linkedCode);
+  const [orderStatus, setOrderStatus] = useState<TrackedOrder | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleTrack = async (e: React.FormEvent) => {
+  const handleTrack = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!orderId.trim()) return;
+    track(orderId);
+  };
+
+  useEffect(() => {
+    if (linkedCode) track(linkedCode);
+  }, [linkedCode]);
+
+  async function track(code: string) {
+    if (!code.trim()) return;
 
     setLoading(true);
     setError('');
     setOrderStatus(null);
 
     // Remove '#' if user typed it, and trim whitespace
-    const cleanId = orderId.replace(/^#/, '').trim();
+    const cleanId = code.replace(/^#/, '').trim();
 
     try {
       // FIX: Use the 'rpc' method to call our database function
       // This is necessary because we are matching a partial UUID (Text) against a UUID column
       const { data, error } = await supabase
         .rpc('get_order_by_tracking', { code: cleanId })
-        .maybeSingle();
+        .maybeSingle<TrackedOrder>();
 
       if (error) throw error;
       
@@ -41,7 +61,7 @@ export default function TrackOrder() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   const getStatusIcon = (status: string) => {
     switch (status) {

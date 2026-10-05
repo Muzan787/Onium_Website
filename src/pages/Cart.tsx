@@ -1,133 +1,386 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Trash2, Plus, Minus, ShoppingBag, Truck, Shield, Package, ArrowLeft, CreditCard, MessageCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { ArrowLeft, Check, MessageCircle, Trash2 } from 'lucide-react';
+import { supabase, Product } from '../lib/supabase';
 import { useCart } from '../context/CartContext';
+import { accentFor } from '../lib/productAccents';
+import { formatRs } from '../lib/format';
+import { describeTitle, finalPriceOf } from '../lib/productInfo';
+import { FREE_DELIVERY_FROM, deliveryFeeFor } from '../lib/pricing';
+import { useFooterInView } from '../hooks/useFooterInView';
+import { useInViewport } from '../hooks/useInViewport';
+import SEO from '../components/SEO';
+import ProductLink from '../components/ProductLink';
+import ProductTile from '../components/ProductTile';
+import QuantityStepper from '../components/QuantityStepper';
+import { OrderTotals } from '../components/OrderSummary';
+
+const WHATSAPP = 'https://wa.me/923231550147';
+const EASE = [0.16, 1, 0.3, 1] as const;
+const ALL_PRODUCTS = { pathname: '/', hash: '#products' };
+
+type CartLine = ReturnType<typeof useCart>['cartItems'][number];
 
 export default function Cart() {
-  const { cartItems, updateQuantity, removeFromCart, getTotalPrice, clearCart } = useCart();
+  const { cartItems, updateQuantity, removeFromCart, addToCart, clearCart, getTotalPrice, getTotalItems } = useCart();
   const navigate = useNavigate();
+  const reduceMotion = useReducedMotion();
+  const footerInView = useFooterInView();
+  // The bar hands over to the button at the end of the totals once that's on screen.
+  const [inlineCheckoutRef, inlineCheckoutInView] = useInViewport<HTMLButtonElement>();
+  const [range, setRange] = useState<Product[]>([]);
+  const [confirmingClear, setConfirmingClear] = useState(false);
 
-  const shippingThreshold = 3000;
-  const freeShipping = getTotalPrice() >= shippingThreshold;
-  const remainingForFreeShipping = shippingThreshold - getTotalPrice();
-  const whatsappMessage = encodeURIComponent(`I want to purchase following items:\n${cartItems.map(item => `• ${item.title}`).join('\n')}`);
+  useEffect(() => {
+    supabase
+      .from('products')
+      .select('*')
+      .order('created_at')
+      .then(({ data }) => setRange(data ?? []));
+  }, []);
+
+  const subtotal = getTotalPrice();
+  const delivery = deliveryFeeFor(subtotal);
+  const itemCount = getTotalItems();
+
+  // Whatever isn't in the cart yet, cheapest first: the easiest way over the
+  // free delivery line.
+  const suggestions = useMemo(() => {
+    const inCart = new Set(cartItems.map((item) => item.id));
+    return range.filter((p) => !inCart.has(p.id) && p.stock !== 0).sort((a, b) => finalPriceOf(a) - finalPriceOf(b));
+  }, [range, cartItems]);
+
+  const whatsappOrder = `${WHATSAPP}?text=${encodeURIComponent(
+    `Hi Onium, I'd like to order:\n${cartItems
+      .map((item) => `• ${item.title} × ${item.quantity}`)
+      .join('\n')}\n\nTotal: ${formatRs(subtotal + delivery)}`,
+  )}`;
+
+  const handleRemove = (item: CartLine) => {
+    const { name } = describeTitle(item);
+    removeFromCart(item.id);
+    toast(
+      (t) => (
+        <span className="flex items-center gap-4">
+          <span>Removed {name}</span>
+          <button
+            type="button"
+            onClick={() => {
+              addToCart(item, item.quantity);
+              toast.dismiss(t.id);
+            }}
+            className="font-semibold underline underline-offset-2"
+          >
+            Undo
+          </button>
+        </span>
+      ),
+      { id: `removed-${item.id}`, duration: 5000 },
+    );
+  };
 
   if (cartItems.length === 0) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="text-center max-w-md">
-          <div className="inline-flex p-4 bg-primary-100 rounded-full mb-6">
-            <ShoppingBag className="w-12 h-12 text-primary-600" />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">Your Cart is Empty</h2>
-          <p className="text-slate-500 mb-8">Add some premium cleaning products to make your home sparkle!</p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link to="/" className="px-6 py-3 bg-primary-600 text-white font-bold rounded-xl hover:bg-primary-700 transition-colors shadow-lg shadow-primary-900/20">Start Shopping</Link>
-          </div>
-        </div>
+      <div>
+        <SEO title="Your cart" noIndex />
+        <section className="container mx-auto px-4 pt-16 pb-12 md:pt-24 text-center max-w-md">
+          <h1 className="text-[40px] md:text-5xl font-extrabold text-ink leading-none">Your cart is empty</h1>
+          <p className="mt-4 text-[17px] text-ink/70">Pick a cleaner for the job and it'll wait for you here.</p>
+          <Link
+            to={ALL_PRODUCTS}
+            className="mt-8 inline-flex items-center justify-center min-h-[52px] px-8 rounded-full bg-primary-600 text-white font-semibold hover:bg-primary-700 transition-colors"
+          >
+            Shop the range
+          </Link>
+        </section>
+        <SuggestionStrip title="The range" products={range} />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-32">
-      <a href={`https://wa.me/923231550147?text=I%20want%20to%20order...`} target="_blank" rel="noopener noreferrer" className="fixed bottom-24 right-6 z-40 bg-gradient-to-r from-primary-600 to-primary-500 text-white p-3 rounded-full shadow-2xl hover:scale-110 transition-all"><MessageCircle className="w-6 h-6" fill="white" /></a>
+    <div>
+      <SEO title="Your cart" noIndex />
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-1">Your Cart</h1>
-            <p className="text-slate-500 text-sm font-medium">{cartItems.length} items</p>
+      <div className="container mx-auto px-4 pt-4 pb-12 md:pt-8 lg:grid lg:grid-cols-12 lg:gap-12 lg:items-start">
+        <div className="lg:col-span-7">
+          <Link
+            to={ALL_PRODUCTS}
+            className="-ml-2 inline-flex items-center gap-1.5 min-h-11 px-2 rounded-full text-sm font-semibold text-primary-700 hover:underline underline-offset-4"
+          >
+            <ArrowLeft className="w-4 h-4" aria-hidden />
+            Keep shopping
+          </Link>
+
+          <div className="mt-2 flex items-baseline justify-between gap-4">
+            <h1 className="text-[40px] md:text-5xl font-extrabold text-ink leading-none">Your cart</h1>
+            <p className="text-ink/70 tabular">
+              {itemCount} {itemCount === 1 ? 'item' : 'items'}
+            </p>
           </div>
-          <button onClick={() => navigate('/')} className="flex items-center gap-2 text-primary-600 hover:text-primary-700 font-bold text-sm"><ArrowLeft className="w-4 h-4" /> Continue Shopping</button>
-        </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-4">
-            {!freeShipping && (
-              <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
-                <div className="flex items-center gap-3 mb-3">
-                  <Truck className="w-6 h-6 text-primary-600" />
-                  <div className="flex-1">
-                    <div className="flex justify-between text-sm font-bold text-slate-900 mb-1">
-                      <span>Add Rs{remainingForFreeShipping.toFixed(0)} for free delivery!</span>
-                      <span>{Math.round((getTotalPrice()/shippingThreshold)*100)}%</span>
-                    </div>
-                    <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                      <div className="bg-primary-500 h-full rounded-full transition-all duration-500" style={{ width: `${Math.min((getTotalPrice() / shippingThreshold) * 100, 100)}%` }}></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+          <DeliveryProgress subtotal={subtotal} />
 
-            {freeShipping && (
-              <div className="bg-primary-50 rounded-2xl p-4 border border-primary-100 shadow-sm flex items-center gap-3">
-                <Truck className="w-6 h-6 text-primary-600" />
-                <div>
-                  <div className="font-bold text-primary-700">🎉 Free Delivery Unlocked!</div>
-                  <div className="text-sm text-primary-600">Your order qualifies for free shipping.</div>
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-3">
+          <ul className="mt-6 border-t border-ink/10">
+            <AnimatePresence initial={false}>
               {cartItems.map((item) => (
-                <div key={item.id} className="group bg-white rounded-2xl p-3 border border-slate-200 hover:border-primary-200 transition-colors">
-                  <div className="flex gap-4">
-                    <Link to={`/product/${item.id}`} className="flex-shrink-0 w-24 h-24 bg-slate-50 rounded-xl overflow-hidden p-2">
-                      <img src={item.image_url} alt={item.title} className="w-full h-full object-contain mix-blend-multiply" />
-                    </Link>
-                    <div className="flex-1 flex flex-col justify-between py-1">
-                      <div>
-                        <div className="flex justify-between items-start">
-                          <Link to={`/product/${item.id}`} className="font-bold text-slate-900 hover:text-primary-600 transition-colors line-clamp-2 text-sm md:text-base">{item.title}</Link>
-                          <button onClick={() => removeFromCart(item.id)} className="text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
-                        </div>
-                        <p className="text-xs text-primary-600 font-medium bg-primary-50 inline-block px-2 py-0.5 rounded mt-1">{item.category}</p>
-                      </div>
-                      <div className="flex items-center justify-between mt-2">
-                        <div className="flex items-center border border-slate-200 rounded-lg h-8">
-                          <button onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))} className="px-2 hover:bg-slate-50 text-slate-600"><Minus className="w-3 h-3" /></button>
-                          <span className="px-2 text-sm font-bold text-slate-900">{item.quantity}</span>
-                          <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="px-2 hover:bg-slate-50 text-slate-600"><Plus className="w-3 h-3" /></button>
-                        </div>
-                        <div className="font-bold text-slate-900">Rs{(item.price * item.quantity).toFixed(0)}</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <motion.li
+                  key={item.id}
+                  layout={!reduceMotion}
+                  exit={reduceMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
+                  transition={{ duration: 0.3, ease: EASE }}
+                  className="border-b border-ink/10 overflow-hidden"
+                >
+                  <CartRow
+                    item={item}
+                    onQuantity={(quantity) => updateQuantity(item.id, quantity)}
+                    onRemove={() => handleRemove(item)}
+                  />
+                </motion.li>
               ))}
-            </div>
-            
-            <button onClick={clearCart} className="w-full py-3 text-red-500 font-bold hover:bg-red-50 rounded-xl transition-colors text-sm">Clear Cart</button>
+            </AnimatePresence>
+          </ul>
+
+          <div className="mt-3 flex justify-end">
+            {confirmingClear ? (
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-ink/70">Remove everything?</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    clearCart();
+                    setConfirmingClear(false);
+                  }}
+                  className="min-h-11 px-4 rounded-full bg-clay-700 text-white font-semibold hover:bg-clay-800 transition-colors"
+                >
+                  Empty cart
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmingClear(false)}
+                  className="min-h-11 px-4 rounded-full border border-ink/15 text-ink font-semibold hover:bg-white transition-colors"
+                >
+                  Keep
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmingClear(true)}
+                className="min-h-11 px-2 text-sm font-semibold text-ink/70 hover:text-clay-700 transition-colors"
+              >
+                Empty cart
+              </button>
+            )}
           </div>
 
-          <div className="lg:col-span-1 hidden lg:block">
-            <div className="sticky top-24 bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-              <h2 className="text-xl font-bold text-slate-900 mb-6">Order Summary</h2>
-              <div className="space-y-3 mb-6 border-b border-slate-100 pb-6">
-                <div className="flex justify-between text-slate-600"><span>Subtotal</span><span className="font-bold text-slate-900">Rs{getTotalPrice().toFixed(2)}</span></div>
-                <div className="flex justify-between text-slate-600"><span>Delivery</span><span className={freeShipping ? 'text-primary-600 font-bold' : 'text-slate-900 font-bold'}>{freeShipping ? 'FREE' : 'Rs200'}</span></div>
-              </div>
-              <div className="flex justify-between text-lg font-bold text-slate-900 mb-6"><span>Total</span><span>Rs{(freeShipping ? getTotalPrice() : getTotalPrice() + 200).toFixed(2)}</span></div>
-              <button onClick={() => navigate('/checkout')} className="w-full bg-primary-600 text-white py-3.5 rounded-xl font-bold hover:bg-primary-700 transition-colors shadow-lg shadow-primary-900/10 flex items-center justify-center gap-2"><CreditCard className="w-5 h-5"/> Proceed to Checkout</button>
-            </div>
+          {/* On a phone the totals sit under the list; the bar below carries the button. */}
+          <div className="lg:hidden mt-6 rounded-[28px] bg-white p-6">
+            <OrderTotals subtotal={subtotal} delivery={delivery} />
+            <button
+              ref={inlineCheckoutRef}
+              type="button"
+              onClick={() => navigate('/checkout')}
+              className="mt-6 w-full min-h-[52px] rounded-full bg-primary-600 text-white font-semibold hover:bg-primary-700 transition-colors"
+            >
+              Checkout
+            </button>
+            <p className="mt-4 text-sm text-ink/70 text-center">Pay on delivery, by bank transfer or cash.</p>
+            <WhatsAppOrder href={whatsappOrder} />
           </div>
         </div>
+
+        <aside className="hidden lg:block lg:col-span-5 lg:sticky lg:top-24 mt-12 lg:mt-14">
+          <div className="rounded-[28px] bg-white p-7">
+            <h2 className="font-display font-extrabold text-ink text-2xl">Summary</h2>
+            <div className="mt-5">
+              <OrderTotals subtotal={subtotal} delivery={delivery} />
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate('/checkout')}
+              className="mt-6 w-full min-h-[52px] rounded-full bg-primary-600 text-white font-semibold hover:bg-primary-700 transition-colors"
+            >
+              Checkout
+            </button>
+            <p className="mt-4 text-sm text-ink/70 text-center">Pay on delivery, by bank transfer or cash.</p>
+            <WhatsAppOrder href={whatsappOrder} />
+          </div>
+        </aside>
       </div>
 
-      {/* Mobile Sticky Checkout */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] z-50">
-        <div className="flex items-center gap-4">
-          <div className="flex-1">
-            <p className="text-xs text-slate-500 font-medium">Total (incl. delivery)</p>
-            <p className="text-xl font-extrabold text-slate-900">Rs{(freeShipping ? getTotalPrice() : getTotalPrice() + 100).toFixed(0)}</p>
+      <SuggestionStrip title="Add to your order" products={suggestions} />
+
+      <AnimatePresence>
+        {!footerInView && !inlineCheckoutInView && (
+          <motion.div
+            key="checkout-bar"
+            className="lg:hidden fixed inset-x-0 bottom-0 z-40 bg-white border-t border-ink/10 shadow-[0_-12px_32px_-16px_rgba(10,27,61,0.3)]"
+            style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
+            initial={reduceMotion ? false : { y: '100%' }}
+            animate={{ y: 0 }}
+            exit={reduceMotion ? { opacity: 0 } : { y: '100%' }}
+            transition={{ duration: 0.35, ease: EASE }}
+          >
+            <div className="px-4 pt-3 flex items-center gap-4">
+              <div className="min-w-0">
+                <p className="text-xs text-ink/70">{delivery ? `Incl. ${formatRs(delivery)} delivery` : 'Free delivery'}</p>
+                <p className="font-display font-extrabold text-ink text-2xl leading-tight tabular">
+                  {formatRs(subtotal + delivery)}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/checkout')}
+                className="flex-1 min-h-[52px] rounded-full bg-primary-600 text-white font-semibold hover:bg-primary-700 active:scale-[0.98] transition-[background-color,transform]"
+              >
+                Checkout
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function CartRow({
+  item,
+  onQuantity,
+  onRemove,
+}: {
+  item: CartLine;
+  onQuantity: (quantity: number) => void;
+  onRemove: () => void;
+}) {
+  const photoRef = useRef<HTMLAnchorElement>(null);
+  const { name, size } = describeTitle(item);
+  const unitPrice = finalPriceOf(item);
+
+  return (
+    <div className="py-5 flex gap-4">
+      <ProductLink
+        ref={photoRef}
+        product={item}
+        photo={photoRef}
+        tabIndex={-1}
+        aria-hidden
+        className="relative shrink-0 w-24 h-24 md:w-28 md:h-28 rounded-2xl overflow-hidden"
+        style={{ backgroundColor: accentFor(item).tint }}
+      >
+        <img src={item.image_url} alt="" width={224} height={224} className="absolute inset-0 w-full h-full object-cover" />
+      </ProductLink>
+
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <h2 className="font-display font-bold text-ink text-lg leading-tight">
+              <ProductLink
+                product={item}
+                photo={photoRef}
+                title={item.title}
+                className="hover:text-primary-700 transition-colors focus-visible:underline"
+              >
+                {name}
+              </ProductLink>
+            </h2>
+            {size && <p className="mt-0.5 text-sm text-ink/70">{size}</p>}
           </div>
-          <button onClick={() => navigate('/checkout')} className="flex-1 bg-primary-600 text-white px-4 py-3 rounded-xl font-bold shadow-lg shadow-primary-900/20 active:scale-95 transition-transform flex items-center justify-center gap-2">
-            Checkout <ArrowLeft className="w-5 h-5 rotate-180" />
+          <button
+            type="button"
+            onClick={onRemove}
+            aria-label={`Remove ${name} from cart`}
+            className="-mt-2.5 -mr-2.5 shrink-0 w-11 h-11 grid place-items-center rounded-full text-ink/60 hover:text-clay-700 hover:bg-clay-50 transition-colors"
+          >
+            <Trash2 className="w-[18px] h-[18px]" aria-hidden />
           </button>
+        </div>
+
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <QuantityStepper
+            size="md"
+            value={item.quantity}
+            onChange={onQuantity}
+            max={Math.max(1, Math.min(99, item.stock || 99))}
+            label={`Quantity of ${name}`}
+          />
+          <div className="text-right">
+            <p className="font-display font-bold text-ink text-lg tabular">{formatRs(unitPrice * item.quantity)}</p>
+            {item.quantity > 1 && <p className="text-xs text-ink/70 tabular">{formatRs(unitPrice)} each</p>}
+          </div>
         </div>
       </div>
     </div>
+  );
+}
+
+function DeliveryProgress({ subtotal }: { subtotal: number }) {
+  const remaining = Math.max(0, FREE_DELIVERY_FROM - subtotal);
+  const progress = Math.min(1, subtotal / FREE_DELIVERY_FROM);
+
+  return (
+    <div className="mt-6 rounded-3xl bg-white p-5">
+      {remaining > 0 ? (
+        <p className="text-[15px] text-ink">
+          Add <span className="font-semibold tabular">{formatRs(remaining)}</span> more for free delivery.
+        </p>
+      ) : (
+        <p className="flex items-center gap-2 text-[15px] font-semibold text-leaf-800">
+          <Check className="w-[18px] h-[18px]" aria-hidden />
+          Free delivery on this order
+        </p>
+      )}
+      <div
+        role="progressbar"
+        aria-label="Progress towards free delivery"
+        aria-valuemin={0}
+        aria-valuemax={FREE_DELIVERY_FROM}
+        aria-valuenow={Math.min(subtotal, FREE_DELIVERY_FROM)}
+        className="mt-3 h-2 rounded-full bg-ink/10 overflow-hidden"
+      >
+        <div
+          className={`h-full rounded-full transition-[width,background-color] duration-500 ${
+            remaining > 0 ? 'bg-primary-600' : 'bg-leaf-600'
+          }`}
+          style={{ width: `${progress * 100}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function WhatsAppOrder({ href }: { href: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mt-4 w-full inline-flex items-center justify-center gap-2 min-h-12 px-6 rounded-full border border-ink/15 text-ink font-semibold hover:bg-surface transition-colors"
+    >
+      <MessageCircle className="w-[18px] h-[18px] text-[#1DA851]" aria-hidden />
+      Order on WhatsApp instead
+    </a>
+  );
+}
+
+function SuggestionStrip({ title, products }: { title: string; products: Product[] }) {
+  if (products.length === 0) return null;
+  return (
+    <section aria-labelledby="suggestions-heading" className="py-10 md:py-16">
+      <div className="container mx-auto px-4">
+        <h2 id="suggestions-heading" className="font-display font-extrabold text-ink text-[28px] md:text-4xl">
+          {title}
+        </h2>
+        <ul className="mt-5 -mx-4 px-4 scroll-px-4 flex gap-3 overflow-x-auto snap-x snap-mandatory no-scrollbar md:mx-0 md:px-0 md:grid md:grid-cols-4 md:gap-5 md:overflow-visible">
+          {products.map((product) => (
+            <li key={product.id} className="w-[164px] shrink-0 snap-start md:w-auto md:[&:nth-child(n+5)]:hidden">
+              <ProductTile product={product} />
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
   );
 }
