@@ -8,12 +8,25 @@ import SEO from '../components/SEO';
 
 const WHATSAPP = 'https://wa.me/923231550147';
 
-/** Cloudinary can resize and re-encode on the fly; the originals are 1000px squares. */
-const cld = (url: string, t: string) =>
-  url.includes('/upload/') ? url.replace('/upload/', `/upload/${t}/`) : url;
+/**
+ * The range as a shelf. These are the cut-out bottles, ordered warm to cool so
+ * the lineup reads as one spectrum, each paired with a glow taken from its own
+ * liquid. Nothing sits on top of a photograph, so the colour stays vivid and
+ * the type gets clean space.
+ */
+const HERO_BOTTLES = [
+  { src: 'v1769461877/4_nlecjj.png', glow: '#e0b400' },
+  { src: 'v1769461877/2_gjkqik.png', glow: '#c9a227' },
+  { src: 'v1769461877/3_lfjeod.png', glow: '#c74b52' },
+  { src: 'v1769461877/1_evgktx.png', glow: '#4e8f96' },
+  { src: 'v1769461878/6_ek3cwb.png', glow: '#2e9ad0' },
+  { src: 'v1769461880/8_lgiswx.png', glow: '#3f6fd8' },
+  { src: 'v1769461878/7_rh53s3.png', glow: '#8a9a5b' },
+  { src: 'v1769461877/5_p5xx5m.png', glow: '#1f47a8' },
+];
 
-const HERO_IMAGE =
-  'https://res.cloudinary.com/dztldh7o2/image/upload/v1769886084/c3dethlgcl5b9ht7wxgn.jpg';
+const bottleUrl = (src: string) =>
+  `https://res.cloudinary.com/dztldh7o2/image/upload/f_auto,q_auto,h_520/${src}`;
 
 /** The three things worth saying, each carrying one colour from the range. */
 const CLAIMS = [
@@ -116,60 +129,115 @@ export default function Home() {
       <SEO title="Home" description="Premium eco-friendly cleaning solutions for a safer, sparklier home." />
 
       {/* ---------------------------------------------------------------- HERO */}
-      <section className="relative min-h-[80svh] flex items-end overflow-hidden">
-        <img
-          src={cld(HERO_IMAGE, 'f_auto,q_auto,w_1200')}
-          alt="Onium dish wash on a sunlit kitchen table"
-          className="absolute inset-0 w-full h-full object-cover"
-          style={{ objectPosition: '38% top' }}
-          decoding="async"
-        />
-        {/* Opaque only where the type actually sits, so most of the frame stays
-            a photograph rather than a dark slab. */}
+      <section className="relative min-h-[78svh] flex flex-col overflow-hidden isolate">
+        {/* Ink deepening into brand blue, so the field brightens down toward
+            the shelf rather than sitting flat. */}
         <div
-          className="absolute inset-0"
+          className="absolute inset-0 -z-10"
           style={{
             backgroundImage:
-              'linear-gradient(to top, rgba(10,27,61,0.96) 0%, rgba(10,27,61,0.9) 22%, rgba(10,27,61,0.55) 42%, rgba(10,27,61,0.12) 66%, rgba(10,27,61,0) 100%)',
+              'linear-gradient(176deg, #081634 0%, #0b1f4a 34%, #102a63 62%, #16387f 100%)',
           }}
         />
+        {/* A single cool highlight so the top corner isn't dead flat. */}
+        <div
+          className="absolute -top-32 -right-24 w-[70vw] h-[70vw] max-w-[520px] max-h-[520px] rounded-full blur-[110px] opacity-40 -z-10"
+          style={{ background: 'radial-gradient(circle, #2e6bff 0%, transparent 70%)' }}
+          aria-hidden
+        />
 
-        <div className="relative container mx-auto px-4 pb-12 pt-24">
-          <div className="max-w-xl">
-            <motion.h1
-              {...rise(0.05)}
-              className="font-display font-extrabold text-white text-[clamp(2.25rem,9vw,4.5rem)] leading-[0.95]"
+        <div className="relative container mx-auto px-4 pt-14 sm:pt-20">
+          <motion.h1
+            {...rise(0.05)}
+            className="font-display font-extrabold text-white text-[clamp(2.6rem,12vw,5.5rem)] leading-[0.92] max-w-[14ch]"
+          >
+            Every job in the house.
+          </motion.h1>
+
+          <motion.p
+            {...rise(0.18)}
+            className="mt-5 text-white/70 text-base sm:text-lg leading-relaxed max-w-md"
+          >
+            Eight non-toxic cleaners, made in Pakistan. Delivered across Islamabad
+            and Rawalpindi.
+          </motion.p>
+
+          <motion.div {...rise(0.3)} className="mt-7 flex flex-wrap items-center gap-3">
+            <a
+              href="#products"
+              className="inline-flex items-center gap-2 bg-white text-ink font-semibold px-6 py-3.5 rounded-full hover:bg-primary-50 active:scale-95 transition-all"
             >
-              10× the power.
-              <br />
-              None of the harsh stuff.
-            </motion.h1>
+              Shop the range
+              {cheapest !== null && (
+                <span className="text-ink/45 tabular">from Rs {cheapest.toFixed(0)}</span>
+              )}
+            </a>
+            <a
+              href={`${WHATSAPP}?text=Asalamo%20Alikum%2C%20I%20want%20to%20order...`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 border border-white/25 text-white font-semibold px-5 py-3.5 rounded-full hover:bg-white/10 transition-colors"
+            >
+              <MessageCircle className="w-4 h-4" />
+              WhatsApp
+            </a>
+          </motion.div>
+        </div>
 
-            <motion.p {...rise(0.18)} className="mt-4 text-white/75 text-base sm:text-lg leading-relaxed max-w-sm">
-              Eight everyday cleaners, delivered across Islamabad and Rawalpindi.
-            </motion.p>
-
-            <motion.div {...rise(0.3)} className="mt-7 flex flex-wrap items-center gap-3">
-              <a
-                href="#products"
-                className="inline-flex items-center gap-2 bg-white text-ink font-semibold px-6 py-3.5 rounded-full hover:bg-primary-50 active:scale-95 transition-all"
+        {/* The shelf. Bottles are bottom-aligned and the row runs wider than the
+            screen, so the range reads as continuing past both edges. */}
+        <div className="relative mt-auto pt-6 w-full">
+          <div className="relative flex items-end justify-center px-2">
+            {HERO_BOTTLES.map((bottle, i) => (
+              <motion.div
+                key={bottle.src}
+                className={[
+                  'relative shrink-0',
+                  i > 0 ? '-ml-12 sm:-ml-10 lg:-ml-8' : '',
+                  i >= 5 ? 'hidden lg:block' : i >= 3 ? 'hidden sm:block' : '',
+                ].join(' ')}
+                initial={reduceMotion ? false : { opacity: 0, y: 48 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.42 + i * 0.07, ease }}
               >
-                Shop the range
-                {cheapest !== null && (
-                  <span className="text-ink/45 tabular">from Rs {cheapest.toFixed(0)}</span>
-                )}
-              </a>
-              <a
-                href={`${WHATSAPP}?text=Asalamo%20Alikum%2C%20I%20want%20to%20order...`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 border border-white/30 text-white font-semibold px-5 py-3.5 rounded-full hover:bg-white/10 transition-colors"
-              >
-                <MessageCircle className="w-4 h-4" />
-                WhatsApp
-              </a>
-            </motion.div>
+                {/* Each bottle lights the field with the colour of its own liquid */}
+                <span
+                  aria-hidden
+                  className="absolute left-1/2 -translate-x-1/2 bottom-0 w-[150%] aspect-square rounded-full blur-[42px] opacity-55 -z-10"
+                  style={{ background: `radial-gradient(circle, ${bottle.glow} 0%, transparent 68%)` }}
+                />
+                <motion.img
+                  src={bottleUrl(bottle.src)}
+                  alt=""
+                  aria-hidden
+                  loading={i < 3 ? 'eager' : 'lazy'}
+                  decoding="async"
+                  className="block w-auto h-[clamp(190px,50vw,280px)] object-contain drop-shadow-[0_18px_28px_rgba(0,0,0,0.45)]"
+                  animate={
+                    reduceMotion
+                      ? undefined
+                      : { y: [0, -7, 0] }
+                  }
+                  transition={{
+                    duration: 5.5 + i * 0.4,
+                    repeat: Infinity,
+                    ease: 'easeInOut',
+                    delay: i * 0.25,
+                  }}
+                />
+              </motion.div>
+            ))}
           </div>
+
+          {/* Grounds the shelf so the bottles don't float on nothing */}
+          <div
+            className="h-14 sm:h-20 w-full"
+            style={{
+              backgroundImage:
+                'linear-gradient(to bottom, rgba(8,22,52,0) 0%, rgba(8,22,52,0.55) 55%, #081634 100%)',
+            }}
+            aria-hidden
+          />
         </div>
       </section>
 
