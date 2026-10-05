@@ -17,6 +17,16 @@ html {
     @apply bg-surface text-ink;
   }
 
+  /* Removes the double-tap zoom delay on taps without disabling pinch zoom. */
+  a, button, input, select, textarea, label, [role="button"] {
+    touch-action: manipulation;
+  }
+
+  /* Keep anchor targets clear of the sticky header. */
+  [id] {
+    scroll-margin-top: 4.5rem;
+  }
+
   /* Headlines are set tight: at display sizes the default tracking is far too
      loose and the line gaps too wide. */
   h1, h2, h3 {

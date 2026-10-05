@@ -1,430 +1,415 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { MessageCircle, Star } from 'lucide-react';
-import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
+import { useSearchParams } from 'react-router-dom';
+import { MessageCircle, ShieldCheck, Baby, Zap, type LucideIcon } from 'lucide-react';
+import { AnimatePresence, motion, useMotionValueEvent, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import { supabase, Product } from '../lib/supabase';
-import ProductCard from '../components/ProductCard';
 import { ACCENTS } from '../lib/productAccents';
+import { categoryLabel, formatRs } from '../lib/format';
+import ProductRow from '../components/ProductRow';
 import SEO from '../components/SEO';
 
 const WHATSAPP = 'https://wa.me/923231550147';
+const ORDER_TEXT = encodeURIComponent('Asalamo Alikum, I want to order…');
+const BULK_TEXT = encodeURIComponent("I'm interested in a bulk order for my business…");
 
-/**
- * The range as a shelf. These are the cut-out bottles, ordered warm to cool so
- * the lineup reads as one spectrum, each paired with a glow taken from its own
- * liquid. Nothing sits on top of a photograph, so the colour stays vivid and
- * the type gets clean space.
- */
-const HERO_BOTTLES = [
-  { src: 'v1769461877/4_nlecjj.png', glow: '#e0b400' },
-  { src: 'v1769461877/2_gjkqik.png', glow: '#c9a227' },
-  { src: 'v1769461877/3_lfjeod.png', glow: '#c74b52' },
-  { src: 'v1769461877/1_evgktx.png', glow: '#4e8f96' },
-  { src: 'v1769461878/6_ek3cwb.png', glow: '#2e9ad0' },
-  { src: 'v1769461880/8_lgiswx.png', glow: '#3f6fd8' },
-  { src: 'v1769461878/7_rh53s3.png', glow: '#8a9a5b' },
-  { src: 'v1769461877/5_p5xx5m.png', glow: '#1f47a8' },
-];
+/** The gold dish wash bottle: the strongest colour against the logo blue. */
+const HERO_BOTTLE =
+  'https://res.cloudinary.com/dztldh7o2/image/upload/f_auto,q_auto,h_900/v1769461877/4_nlecjj.png';
 
-const bottleUrl = (src: string) =>
-  `https://res.cloudinary.com/dztldh7o2/image/upload/f_auto,q_auto,h_520/${src}`;
-
-/** The three things worth saying, each carrying one colour from the range. */
-const CLAIMS = [
+const CLAIMS: { heading: string; body: string; icon: LucideIcon; color: string; tint: string }[] = [
   {
     heading: 'Nothing harsh in the bottle',
     body: 'Non-toxic, biodegradable formulas. No bleach, no ammonia, no fumes left hanging in the room.',
+    icon: ShieldCheck,
     color: ACCENTS.teal.solid,
+    tint: ACCENTS.teal.tint,
   },
   {
     heading: 'Safe around kids and pets',
     body: 'Made to be used in a home where someone small is always underfoot.',
+    icon: Baby,
     color: ACCENTS.gold.solid,
+    tint: ACCENTS.gold.tint,
   },
   {
     heading: '10× power on grease',
     body: 'The cleaning still has to work. Every bottle is built for the worst job in the house.',
+    icon: Zap,
     color: ACCENTS.clay.solid,
+    tint: ACCENTS.clay.tint,
   },
 ];
+
+const EASE = [0.16, 1, 0.3, 1] as const;
 
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [categories, setCategories] = useState<string[]>([]);
-  const [sortBy, setSortBy] = useState<string>('newest');
-  const [stats, setStats] = useState({ average: 0, total: 0 });
+  const [sortBy, setSortBy] = useState<'newest' | 'price-low' | 'price-high'>('newest');
+
+  // The selected category lives in the URL so a filtered view can be shared
+  // on WhatsApp and survives a refresh.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedCategory = searchParams.get('category') ?? 'all';
 
   const reduceMotion = useReducedMotion();
-  const claimsRef = useRef<HTMLDivElement>(null);
+  const heroRef = useRef<HTMLElement>(null);
 
-  // The signature moment: scrolling the claims band lights the page with each
-  // product colour in turn. These are cross-fading glows over a constant ink
-  // base rather than an animated background colour — interpolating teal to
-  // gold to clay in RGB goes through mud, and white type on a gold field is
-  // nowhere near readable.
-  const { scrollYProgress } = useScroll({
-    target: claimsRef,
-    offset: ['start end', 'end start'],
-  });
-  const glow1 = useTransform(scrollYProgress, [0.05, 0.25, 0.42], [0, 0.5, 0]);
-  const glow2 = useTransform(scrollYProgress, [0.3, 0.5, 0.68], [0, 0.5, 0]);
-  const glow3 = useTransform(scrollYProgress, [0.55, 0.75, 0.95], [0, 0.5, 0]);
-  const glows = [glow1, glow2, glow3];
+  // The signature moment: as the hero scrolls away the bottle lifts and swings
+  // a little further over, as if it's being picked up.
+  const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
+  const bottleY = useTransform(scrollYProgress, [0, 1], [0, -90]);
+  const bottleRotate = useTransform(scrollYProgress, [0, 1], [8, 17]);
+  const glowScale = useTransform(scrollYProgress, [0, 1], [1, 1.35]);
+
+  // The hero already has a WhatsApp button, and on a phone the floating one
+  // would sit on top of the delivery promise in the first screen. Bring it in
+  // only once the hero's own button has scrolled away.
+  const [showFab, setShowFab] = useState(false);
+  useMotionValueEvent(scrollYProgress, 'change', (v) => setShowFab(v > 0.8));
 
   useEffect(() => {
-    fetchGlobalStats();
-    fetchProducts();
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (error) throw error;
+        setProducts(data || []);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    })();
   }, []);
 
-  const fetchGlobalStats = async () => {
-    const { data } = await supabase.from('reviews').select('rating').eq('is_approved', true);
-    if (data && data.length > 0) {
-      const avg = data.reduce((acc, curr) => acc + curr.rating, 0) / data.length;
-      setStats({ average: parseFloat(avg.toFixed(1)), total: data.length });
-    }
-  };
-
-  const fetchProducts = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      setProducts(data || []);
-      setCategories(Array.from(new Set((data || []).map((p) => p.category))));
-    } catch (error) {
-      console.error('Error fetching products:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const categories = useMemo(() => Array.from(new Set(products.map((p) => p.category))), [products]);
 
   const visibleProducts = useMemo(() => {
-    let filtered = [...products];
-    if (selectedCategory !== 'all') filtered = filtered.filter((p) => p.category === selectedCategory);
-    if (sortBy === 'price-low') filtered.sort((a, b) => a.price - b.price);
-    if (sortBy === 'price-high') filtered.sort((a, b) => b.price - a.price);
-    return filtered;
+    const list =
+      selectedCategory === 'all' ? [...products] : products.filter((p) => p.category === selectedCategory);
+    if (sortBy === 'price-low') list.sort((a, b) => a.price - b.price);
+    if (sortBy === 'price-high') list.sort((a, b) => b.price - a.price);
+    return list;
   }, [products, selectedCategory, sortBy]);
 
-  const cheapest = useMemo(
-    () => (products.length ? Math.min(...products.map((p) => p.price)) : null),
-    [products]
-  );
+  const priceRange = useMemo(() => {
+    if (!products.length) return null;
+    const prices = products.map((p) => p.price);
+    return { min: Math.min(...prices), max: Math.max(...prices) };
+  }, [products]);
 
-  const ease = [0.16, 1, 0.3, 1] as const;
+  const chooseCategory = (category: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (category === 'all') next.delete('category');
+    else next.set('category', category);
+    setSearchParams(next, { replace: true });
+    document.getElementById('products')?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
+  };
+
   const rise = (delay: number) =>
     reduceMotion
       ? {}
       : {
-          initial: { opacity: 0, y: 24 },
+          initial: { opacity: 0, y: 28 },
           animate: { opacity: 1, y: 0 },
-          transition: { duration: 0.7, delay, ease },
+          transition: { duration: 0.75, delay, ease: EASE },
         };
+
+  const chip = (active: boolean) =>
+    `inline-flex items-center min-h-11 px-4 rounded-full text-[13px] font-medium whitespace-nowrap transition-colors ${
+      active ? 'bg-ink text-white' : 'bg-white text-ink/75 border border-ink/15 hover:border-ink/35'
+    }`;
 
   return (
     <div className="bg-surface">
-      <SEO title="Home" description="Premium eco-friendly cleaning solutions for a safer, sparklier home." />
+      <SEO
+        title="Home"
+        description="Non-toxic cleaners for every job in the house, made in Pakistan and delivered in Islamabad and Rawalpindi. Pay on delivery."
+      />
 
-      {/* ---------------------------------------------------------------- HERO */}
-      <section className="relative min-h-[78svh] flex flex-col overflow-hidden isolate">
-        {/* Ink deepening into brand blue, so the field brightens down toward
-            the shelf rather than sitting flat. */}
-        <div
-          className="absolute inset-0 -z-10"
-          style={{
-            backgroundImage:
-              'linear-gradient(176deg, #081634 0%, #0b1f4a 34%, #102a63 62%, #16387f 100%)',
-          }}
-        />
-        {/* A single cool highlight so the top corner isn't dead flat. */}
-        <div
-          className="absolute -top-32 -right-24 w-[70vw] h-[70vw] max-w-[520px] max-h-[520px] rounded-full blur-[110px] opacity-40 -z-10"
-          style={{ background: 'radial-gradient(circle, #2e6bff 0%, transparent 70%)' }}
-          aria-hidden
-        />
-
-        <div className="relative container mx-auto px-4 pt-14 sm:pt-20">
-          <motion.h1
-            {...rise(0.05)}
-            className="font-display font-extrabold text-white text-[clamp(2.6rem,12vw,5.5rem)] leading-[0.92] max-w-[14ch]"
-          >
-            Every job in the house.
-          </motion.h1>
-
-          <motion.p
-            {...rise(0.18)}
-            className="mt-5 text-white/70 text-base sm:text-lg leading-relaxed max-w-md"
-          >
-            Eight non-toxic cleaners, made in Pakistan. Delivered across Islamabad
-            and Rawalpindi.
-          </motion.p>
-
-          <motion.div {...rise(0.3)} className="mt-7 flex flex-wrap items-center gap-3">
-            <a
-              href="#products"
-              className="inline-flex items-center gap-2 bg-white text-ink font-semibold px-6 py-3.5 rounded-full hover:bg-primary-50 active:scale-95 transition-all"
+      {/* Everything up to the end of the range shares one container, so the
+          category bar stays pinned while you browse products and lets go
+          before the claims and footer. */}
+      <div>
+        <nav
+          aria-label="Product categories"
+          className="sticky top-14 z-40 bg-surface/95 backdrop-blur-md border-b border-ink/10"
+        >
+          <div className="container mx-auto flex items-center gap-2 px-4 py-3 overflow-x-auto no-scrollbar">
+            <button
+              type="button"
+              onClick={() => chooseCategory('all')}
+              aria-pressed={selectedCategory === 'all'}
+              className={chip(selectedCategory === 'all')}
             >
-              Shop the range
-              {cheapest !== null && (
-                <span className="text-ink/45 tabular">from Rs {cheapest.toFixed(0)}</span>
-              )}
-            </a>
-            <a
-              href={`${WHATSAPP}?text=Asalamo%20Alikum%2C%20I%20want%20to%20order...`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 border border-white/25 text-white font-semibold px-5 py-3.5 rounded-full hover:bg-white/10 transition-colors"
-            >
-              <MessageCircle className="w-4 h-4" />
-              WhatsApp
-            </a>
-          </motion.div>
-        </div>
-
-        {/* The shelf. Bottles are bottom-aligned and the row runs wider than the
-            screen, so the range reads as continuing past both edges. */}
-        <div className="relative mt-auto pt-6 w-full">
-          <div className="relative flex items-end justify-center px-2">
-            {HERO_BOTTLES.map((bottle, i) => (
-              <motion.div
-                key={bottle.src}
-                className={[
-                  'relative shrink-0',
-                  i > 0 ? '-ml-12 sm:-ml-10 lg:-ml-8' : '',
-                  i >= 5 ? 'hidden lg:block' : i >= 3 ? 'hidden sm:block' : '',
-                ].join(' ')}
-                initial={reduceMotion ? false : { opacity: 0, y: 48 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.42 + i * 0.07, ease }}
+              Everything
+            </button>
+            {categories.map((cat) => (
+              <button
+                type="button"
+                key={cat}
+                onClick={() => chooseCategory(cat)}
+                aria-pressed={selectedCategory === cat}
+                className={chip(selectedCategory === cat)}
               >
-                {/* Each bottle lights the field with the colour of its own liquid */}
-                <span
-                  aria-hidden
-                  className="absolute left-1/2 -translate-x-1/2 bottom-0 w-[150%] aspect-square rounded-full blur-[42px] opacity-55 -z-10"
-                  style={{ background: `radial-gradient(circle, ${bottle.glow} 0%, transparent 68%)` }}
-                />
-                <motion.img
-                  src={bottleUrl(bottle.src)}
-                  alt=""
-                  aria-hidden
-                  loading={i < 3 ? 'eager' : 'lazy'}
-                  decoding="async"
-                  className="block w-auto h-[clamp(190px,50vw,280px)] object-contain drop-shadow-[0_18px_28px_rgba(0,0,0,0.45)]"
-                  animate={
-                    reduceMotion
-                      ? undefined
-                      : { y: [0, -7, 0] }
-                  }
-                  transition={{
-                    duration: 5.5 + i * 0.4,
-                    repeat: Infinity,
-                    ease: 'easeInOut',
-                    delay: i * 0.25,
-                  }}
-                />
-              </motion.div>
+                {categoryLabel(cat)}
+              </button>
             ))}
           </div>
+        </nav>
 
-          {/* Grounds the shelf so the bottles don't float on nothing */}
-          <div
-            className="h-14 sm:h-20 w-full"
-            style={{
-              backgroundImage:
-                'linear-gradient(to bottom, rgba(8,22,52,0) 0%, rgba(8,22,52,0.55) 55%, #081634 100%)',
-            }}
+        {/* ------------------------------------------------------------ HERO */}
+        <section ref={heroRef} className="relative overflow-hidden bg-primary-600 isolate">
+          {/* Gold light coming off the bottle into the blue */}
+          <motion.div
             aria-hidden
+            className="absolute -bottom-24 -right-24 w-[420px] h-[420px] md:w-[620px] md:h-[620px] rounded-full -z-10 blur-[80px] opacity-60"
+            style={{
+              background: `radial-gradient(circle, ${ACCENTS.gold.solid} 0%, transparent 70%)`,
+              scale: reduceMotion ? 1 : glowScale,
+            }}
           />
-        </div>
-      </section>
+          {/* A cooler highlight top-left so the blue isn't flat */}
+          <div
+            aria-hidden
+            className="absolute -top-32 -left-24 w-[360px] h-[360px] rounded-full -z-10 blur-[90px] opacity-40"
+            style={{ background: 'radial-gradient(circle, #6095fa 0%, transparent 70%)' }}
+          />
 
-      {/* The three reassurances a first-time buyer actually wants, on their own
-          line rather than floating in a shadowed card. */}
-      <div className="bg-white border-b border-ink/10">
-        <div className="container mx-auto px-4 grid grid-cols-3 divide-x divide-ink/10">
-          {[
-            ['Pay on delivery', 'Cash or transfer'],
-            ['Free delivery', 'Over Rs 3,000'],
-            ['1–3 days', 'Isb & Rwp'],
-          ].map(([title, sub]) => (
-            <div key={title} className="py-4 px-2 text-center">
-              <p className="text-[13px] sm:text-sm font-semibold text-ink leading-tight">{title}</p>
-              <p className="text-[11px] sm:text-xs text-ink/50 mt-0.5">{sub}</p>
-            </div>
-          ))}
-        </div>
-      </div>
+          <div className="container mx-auto px-4 pt-12 pb-36 md:pt-20 md:pb-28">
+            {/* The headline is the largest thing on the page, so it isn't
+                faded in — that would hold back the first paint on the cheap
+                Android phones most customers use. It lands instantly and the
+                rest of the hero arrives around it. */}
+            <h1 className="font-display font-extrabold text-white text-[clamp(3rem,14vw,5.75rem)] leading-[0.95] max-w-[12ch]">
+              Cleaners for every job in the house.
+            </h1>
 
-      {/* ------------------------------------------------------------- THE RANGE */}
-      <section id="products" className="container mx-auto px-4 py-14 sm:py-20 scroll-mt-16">
-        <div className="flex items-end justify-between gap-4 mb-7">
-          <div>
-            <h2 className="font-display font-extrabold text-ink text-3xl sm:text-4xl">The range</h2>
-            <p className="text-ink/55 mt-1.5 text-sm sm:text-base">
-              {products.length || 'Eight'} cleaners, one for every job in the house.
-            </p>
-          </div>
-
-          {stats.total > 0 && (
-            <div className="hidden sm:flex items-center gap-2 shrink-0 pb-1">
-              <Star className="w-4 h-4 text-accent-500 fill-current" />
-              <span className="font-semibold text-ink tabular">{stats.average}</span>
-              <span className="text-ink/50 text-sm">from {stats.total} reviews</span>
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2 mb-7 -mx-4 px-4 overflow-x-auto no-scrollbar">
-          <button
-            onClick={() => setSelectedCategory('all')}
-            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-              selectedCategory === 'all'
-                ? 'bg-ink text-white'
-                : 'bg-white text-ink/70 border border-ink/10 hover:border-ink/25'
-            }`}
-          >
-            Everything
-          </button>
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-                selectedCategory === cat
-                  ? 'bg-ink text-white'
-                  : 'bg-white text-ink/70 border border-ink/10 hover:border-ink/25'
-              }`}
+            <motion.p
+              {...rise(0.08)}
+              className="mt-5 text-[15px] md:text-lg leading-relaxed text-white/85 max-w-[17rem] md:max-w-md"
             >
-              {cat}
-            </button>
-          ))}
-        </div>
+              8 non-toxic cleaners, made in Pakistan. Delivered in Islamabad and Rawalpindi.
+            </motion.p>
 
-        {isLoading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8">
-            {[...Array(8)].map((_, i) => (
-              <div key={i}>
-                <div className="aspect-[4/5] rounded-3xl bg-ink/[0.06] animate-pulse" />
-                <div className="h-3 w-20 bg-ink/[0.06] rounded mt-3 animate-pulse" />
-                <div className="h-4 w-full bg-ink/[0.06] rounded mt-2 animate-pulse" />
-              </div>
-            ))}
-          </div>
-        ) : visibleProducts.length === 0 ? (
-          <div className="py-20 text-center">
-            <h3 className="font-display font-bold text-xl text-ink">Nothing in this category yet</h3>
-            <button
-              onClick={() => setSelectedCategory('all')}
-              className="mt-3 text-primary-700 font-semibold hover:underline"
-            >
-              Show everything
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8">
-            {visibleProducts.map((product, i) => (
-              <ProductCard key={product.id} product={product} index={i} />
-            ))}
-          </div>
-        )}
-
-        {products.length > 0 && (
-          <div className="mt-8 flex justify-end">
-            <label className="text-sm text-ink/55 flex items-center gap-2">
-              Sort
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="bg-white border border-ink/10 rounded-full px-3 py-2 text-sm font-medium text-ink"
-              >
-                <option value="newest">Newest</option>
-                <option value="price-low">Price, low to high</option>
-                <option value="price-high">Price, high to low</option>
-              </select>
-            </label>
-          </div>
-        )}
-      </section>
-
-      {/* ------------------------------------------------- CLAIMS / COLOUR FIELD */}
-      <section ref={claimsRef} className="relative bg-ink overflow-hidden">
-        {!reduceMotion &&
-          CLAIMS.map((claim, i) => (
             <motion.div
-              key={`glow-${claim.heading}`}
-              aria-hidden
-              className="pointer-events-none absolute inset-x-0 h-[70svh] blur-[90px]"
-              style={{
-                opacity: glows[i],
-                top: `${i * 30}%`,
-                background: `radial-gradient(60% 50% at 50% 50%, ${claim.color} 0%, transparent 70%)`,
-              }}
-            />
-          ))}
-
-        <div className="relative container mx-auto px-4 py-16 sm:py-24">
-          <div className="max-w-3xl">
-            {CLAIMS.map((claim) => (
-              <div
-                key={claim.heading}
-                className="min-h-[42svh] flex flex-col justify-center border-t border-white/20 py-10"
-              >
-                <span
-                  className="w-12 h-1.5 rounded-full mb-5"
-                  style={{ backgroundColor: claim.color }}
-                  aria-hidden
-                />
-                <h3 className="font-display font-extrabold text-white text-[clamp(1.75rem,6.5vw,3rem)] leading-[1.02]">
-                  {claim.heading}
-                </h3>
-                <p className="mt-3 text-white/70 text-base sm:text-lg leading-relaxed max-w-lg">
-                  {claim.body}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ------------------------------------------------------------ BULK ORDERS */}
-      <section className="bg-surface py-16 sm:py-24">
-        <div className="container mx-auto px-4">
-          <div className="rounded-[2rem] bg-white border border-ink/10 p-8 sm:p-14">
-            <div className="max-w-lg">
-              <h2 className="font-display font-extrabold text-ink text-3xl sm:text-4xl leading-tight">
-                Buying for an office, a mosque or a restaurant?
-              </h2>
-              <p className="mt-4 text-ink/60 leading-relaxed">
-                We do wholesale pricing, bulk packs and regular scheduled deliveries.
-                Send us a message and we will put a quote together.
-              </p>
+              {...rise(0.2)}
+              className="mt-8 flex flex-col md:flex-row gap-3 w-[min(248px,68vw)] md:w-auto"
+            >
               <a
-                href={`${WHATSAPP}?text=I'm%20interested%20in%20bulk%20order%20for%20business...`}
+                href="#products"
+                className="inline-flex items-center justify-center gap-2 bg-white text-ink font-semibold px-6 py-3.5 rounded-full hover:bg-primary-50 active:scale-95 transition-[background-color,transform]"
+              >
+                Shop the range
+              </a>
+              <a
+                href={`${WHATSAPP}?text=${ORDER_TEXT}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-7 inline-flex items-center gap-2 bg-primary-600 text-white font-semibold px-6 py-3.5 rounded-full hover:bg-primary-700 active:scale-95 transition-all"
+                className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-white font-semibold px-6 py-3.5 rounded-full border border-white/35 hover:bg-white/10 active:scale-95 transition-[background-color,transform]"
               >
-                <MessageCircle className="w-4 h-4" />
-                Ask for bulk pricing
+                <MessageCircle className="w-[18px] h-[18px]" aria-hidden />
+                Order on WhatsApp
               </a>
+            </motion.div>
+          </div>
+
+          {/* The bottle breaks out of the bottom-right corner. The outer layer
+              follows the scroll, the inner one does the entrance, so the two
+              never fight over the same transform. */}
+          <motion.div
+            aria-hidden
+            className="pointer-events-none absolute -bottom-20 -right-[84px] w-[290px] md:w-[460px] md:-right-16 md:-bottom-28 lg:right-[6%]"
+            style={reduceMotion ? { rotate: 8 } : { y: bottleY, rotate: bottleRotate }}
+          >
+            <motion.img
+              src={HERO_BOTTLE}
+              alt=""
+              width={580}
+              height={580}
+              decoding="async"
+              className="w-full h-auto object-contain drop-shadow-[-12px_24px_32px_rgba(10,27,61,0.35)]"
+              initial={reduceMotion ? false : { opacity: 0, y: 140, rotate: 14 }}
+              animate={{ opacity: 1, y: 0, rotate: 0 }}
+              transition={{ type: 'spring', stiffness: 70, damping: 16, delay: 0.35 }}
+            />
+          </motion.div>
+        </section>
+
+        {/* ---------------------------------------------------- REASSURANCE */}
+        <div className="bg-white border-b border-ink/10">
+          <ul className="container mx-auto px-4 grid grid-cols-3">
+            {[
+              { title: 'Pay on delivery', sub: 'Cash or transfer' },
+              { title: 'Free delivery', sub: `Over ${formatRs(3000)}` },
+              {
+                title: '1–3 days',
+                sub: 'Isb & Rwp',
+                label: 'Delivered in 1 to 3 days in Islamabad and Rawalpindi',
+              },
+            ].map(({ title, sub, label }, i) => (
+              <li
+                key={title}
+                aria-label={label}
+                className={`py-4 px-1 text-center ${i ? 'border-l border-ink/10' : ''}`}
+              >
+                <p className="text-[12px] sm:text-sm font-semibold text-ink leading-tight">{title}</p>
+                <p className="text-[11px] sm:text-xs text-ink/70 mt-0.5 tabular">{sub}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* ------------------------------------------------------- THE RANGE */}
+        <section id="products" aria-labelledby="range-heading" className="py-12 md:py-20 scroll-mt-[120px]">
+          <div className="container mx-auto px-4 mb-8 flex items-end justify-between gap-4">
+            <div>
+              <h2 id="range-heading" className="font-display font-extrabold text-ink text-3xl md:text-4xl">
+                The range
+              </h2>
+              <p className="mt-2 text-[15px] text-ink/70 tabular">
+                {priceRange
+                  ? `${products.length} cleaners, ${formatRs(priceRange.min)} to ${formatRs(priceRange.max)}.`
+                  : 'Everyday cleaners for the whole house.'}
+              </p>
             </div>
+
+            {products.length > 1 && (
+              <label className="shrink-0">
+                <span className="sr-only">Sort products</span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                  className="min-h-11 bg-white text-ink border border-ink/15 rounded-full pl-3 pr-8 text-[13px] font-medium"
+                >
+                  <option value="newest">Newest</option>
+                  <option value="price-low">Price: low to high</option>
+                  <option value="price-high">Price: high to low</option>
+                </select>
+              </label>
+            )}
+          </div>
+
+          <div aria-live="polite" className="md:container md:mx-auto md:px-4">
+            {isLoading ? (
+              <div className="md:grid md:grid-cols-2 md:gap-5">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className={`px-4 py-7 md:rounded-3xl ${i % 2 ? 'bg-white' : 'bg-ink/[0.04]'}`}>
+                    <div className="flex items-center gap-5">
+                      <div className="w-[132px] aspect-square rounded-2xl bg-ink/[0.07] animate-pulse" />
+                      <div className="flex-1 space-y-2.5">
+                        <div className="h-3 w-20 rounded bg-ink/[0.07] animate-pulse" />
+                        <div className="h-5 w-full rounded bg-ink/[0.07] animate-pulse" />
+                        <div className="h-5 w-16 rounded bg-ink/[0.07] animate-pulse" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : visibleProducts.length === 0 ? (
+              <div className="px-4 py-16 text-center">
+                <h3 className="font-display font-bold text-xl text-ink">Nothing in this category yet</h3>
+                <p className="mt-2 text-ink/70">Everything else in the range is one tap away.</p>
+                <button
+                  type="button"
+                  onClick={() => chooseCategory('all')}
+                  className="mt-5 bg-primary-600 text-white font-semibold px-6 py-3 rounded-full hover:bg-primary-700 transition-colors"
+                >
+                  Show everything
+                </button>
+              </div>
+            ) : (
+              <div className="md:grid md:grid-cols-2 md:gap-5">
+                {visibleProducts.map((product, i) => (
+                  <ProductRow key={product.id} product={product} index={i} />
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
+
+      {/* ---------------------------------------------------------- CLAIMS */}
+      <section aria-labelledby="claims-heading" className="bg-ink">
+        <div className="container mx-auto px-4 py-14 md:py-20">
+          <h2 id="claims-heading" className="sr-only">
+            Why Onium
+          </h2>
+          <ul className="grid gap-9 md:grid-cols-3 md:gap-10">
+            {CLAIMS.map(({ heading, body, icon: Icon, color, tint }, i) => (
+              <motion.li
+                key={heading}
+                className="flex gap-4 items-start"
+                initial={reduceMotion ? false : { opacity: 0, y: 18 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '0px 0px -10% 0px' }}
+                transition={{ duration: 0.55, delay: i * 0.1, ease: EASE }}
+              >
+                <span
+                  aria-hidden
+                  className="w-12 h-12 rounded-full grid place-items-center shrink-0"
+                  style={{ backgroundColor: `${color}4d`, color: tint }}
+                >
+                  <Icon className="w-6 h-6" />
+                </span>
+                <div>
+                  <h3 className="font-display font-bold text-white text-xl leading-snug">{heading}</h3>
+                  <p className="mt-1 text-[14px] text-white/75 leading-relaxed">{body}</p>
+                </div>
+              </motion.li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {/* ------------------------------------------------------------ BULK */}
+      <section className="container mx-auto px-4 py-14 md:py-20">
+        <div className="rounded-[2rem] bg-white p-7 md:p-12 border border-ink/10">
+          <div className="max-w-lg">
+            <h2 className="font-display font-extrabold text-ink text-2xl md:text-4xl leading-tight">
+              Buying for an office, a mosque or a restaurant?
+            </h2>
+            <p className="mt-3 text-[15px] text-ink/70 leading-relaxed">
+              We do wholesale pricing, bulk packs and regular scheduled deliveries. Send us a message
+              and we will put a quote together.
+            </p>
+            <a
+              href={`${WHATSAPP}?text=${BULK_TEXT}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-6 inline-flex items-center justify-center gap-2 w-full sm:w-auto bg-primary-600 text-white font-semibold px-7 py-3.5 rounded-full hover:bg-primary-700 active:scale-95 transition-[background-color,transform]"
+            >
+              <MessageCircle className="w-[18px] h-[18px]" aria-hidden />
+              Ask for bulk pricing
+            </a>
           </div>
         </div>
       </section>
 
-      {/* Sits above the sticky footer area on mobile without covering content */}
-      <a
-        href={`${WHATSAPP}?text=Asalamo%20Alikum%2C%20I%20want%20to%20order...`}
+      {/* Lifted clear of the home indicator on notched phones */}
+      <AnimatePresence>
+        {showFab && (
+      <motion.a
+        initial={reduceMotion ? false : { opacity: 0, scale: 0.6, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.6, y: 16 }}
+        transition={{ type: 'spring', stiffness: 380, damping: 26 }}
+        href={`${WHATSAPP}?text=${ORDER_TEXT}`}
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Chat with Onium on WhatsApp"
-        className="fixed bottom-5 right-5 z-40 w-14 h-14 rounded-full bg-[#25D366] text-white grid place-items-center shadow-xl hover:scale-105 active:scale-95 transition-transform"
+        className="fixed z-40 right-5 w-14 h-14 rounded-full bg-[#1DA851] text-white grid place-items-center shadow-[0_8px_20px_rgba(29,168,81,0.35)]"
+        whileHover={reduceMotion ? undefined : { scale: 1.06 }}
+        whileTap={{ scale: 0.92 }}
+        style={{ bottom: 'calc(1.25rem + env(safe-area-inset-bottom))' }}
       >
-        <MessageCircle className="w-6 h-6 fill-current" />
-      </a>
+        <MessageCircle className="w-6 h-6" aria-hidden />
+      </motion.a>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

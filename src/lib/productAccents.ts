@@ -21,7 +21,7 @@ export interface Accent {
 export const ACCENTS: Record<AccentName, Accent> = {
   gold: { name: 'gold', solid: '#e09400', tint: '#fff6e2', deep: '#7b450c' },
   clay: { name: 'clay', solid: '#b03a33', tint: '#fbeae7', deep: '#772f27' },
-  cyan: { name: 'cyan', solid: '#03a0d2', tint: '#e3f6fd', deep: '#0a7ba6' },
+  cyan: { name: 'cyan', solid: '#03a0d2', tint: '#e3f6fd', deep: '#07698f' },
   blue: { name: 'blue', solid: '#1757d1', tint: '#e8f0fe', deep: '#1b3f92' },
   teal: { name: 'teal', solid: '#0e7490', tint: '#e2f4f7', deep: '#115e6b' },
 };
